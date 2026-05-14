@@ -24,7 +24,9 @@ Polymarket / TheRundown 延迟信号交易系统。
 | 热缓存 | Redis |
 | 原始归档 | S3-compatible object storage；本地 MinIO |
 | 本地部署 | Docker Compose |
-| 生产部署 | 双节点 Docker Compose + systemd |
+| 云服务器部署 | Ubuntu 24.04 LTS + systemd + Nginx/Caddy + 原生 Rust binaries；数据服务可用云托管或独立 VM |
+| Docker 部署 | Docker Engine + Compose v2；支持本地、单机 production、多机 app/data profile |
+| Kubernetes 部署 | 高频扩展 profile；不是首发阻塞项 |
 | Polymarket 签名 | deposit wallet / `POLY_1271` |
 | P0 live order | marketable limit + FAK |
 
@@ -91,7 +93,7 @@ flowchart TD
 | F16 | Polymarket User Adapter | F11 | user WS order/fill sync、order state raw events | signed order submit |
 | F17 | Signer + Execution Gateway | F16 | `POLY_1271` signer、pretrade、FAK submit、cancel、heartbeat、audit | 未通过风控的 intent |
 | F18 | Live small-order verification | F17、F15 | 小额下单/撤单/对账演练报告 | 自动扩大 size |
-| F19 | Production Runbook + Alerts | F18 | runbook、alerts、backup/restore、release checklist | 无审计 live 恢复 |
+| F19 | Production Runbook + Alerts | F18 | runbook、alerts、backup/restore、云服务器原生部署、Docker Compose 部署、release checklist | 无审计 live 恢复 |
 
 ## 5. 当前开发进度
 
@@ -109,7 +111,7 @@ flowchart TD
 
 | 完成 | ID | 功能 | 状态 | 进度 | 当前产出 | 下一步验收 |
 |---|---|---|---|---:|---|---|
-| ✅ | F0 | 文档与架构定版 | Done | 100% | `docs/architecture-design.md`、`docs/technical-solution.md`、本 README 等 | 文档无二选一架构、README 有顺序表 |
+| ✅ | F0 | 文档与架构定版 | Done | 100% | `docs/production-ready-engineering-spec.md`、`docs/architecture-design.md`、`docs/technical-solution.md`、本 README 等 | 文档无二选一架构、README 有顺序表 |
 |  | F1 | Monorepo 与共享模型 | Ready | 0% | 无代码 | Rust workspace 可编译，domain model 单测通过 |
 |  | F2 | 本地基础设施 | Blocked | 0% | 等待 F1 | `docker compose up` 启动 Redpanda/PostgreSQL/ClickHouse/Redis/MinIO |
 |  | F3 | Topic 与 schema | Blocked | 0% | 等待 F2 | topic init 脚本可重复执行，schema snapshot 通过 |
@@ -128,17 +130,18 @@ flowchart TD
 |  | F16 | Polymarket User Adapter | Blocked | 0% | 等待 F11 | user WS order/fill 状态可入库 |
 |  | F17 | Signer + Execution Gateway | Blocked | 0% | 等待 F16 | mock CLOB 下单/撤单/heartbeat 全链路通过 |
 |  | F18 | Live small-order verification | Blocked | 0% | 等待 F17/F15 | 小额 live 演练记录完整 |
-|  | F19 | Production Runbook + Alerts | Blocked | 0% | 等待 F18 | 故障演练和恢复步骤可执行 |
+|  | F19 | Production Runbook + Alerts | Blocked | 0% | 等待 F18 | 云服务器原生部署和 Docker Compose 部署均可执行，故障演练和恢复步骤可执行 |
 |  | X1 | Spread/total live 支持 | Later | 0% | 当前不实现 | full-game moneyline 稳定后单独设计 |
 |  | X2 | 第二执行 venue | Later | 0% | 当前不实现 | 单独核验条款、接口和风控 |
 |  | X3 | 多外部赔率源 | Later | 0% | 当前不实现 | 单独核验数据授权和延迟 |
-|  | X4 | Kubernetes | Later | 0% | 当前不实现 | 当前生产定版为双节点 Compose + systemd |
+|  | X4 | Kubernetes | Later | 0% | 当前不实现 | 当前首发必须完成云服务器原生部署与 Docker Compose 部署；Kubernetes 作为高频扩展 profile |
 |  | X5 | Legacy Proxy/Safe wallet | Later | 0% | 当前不实现 | 当前签名定版为 deposit wallet / `POLY_1271` |
 
 ## 6. 文档索引
 
 | 文档 | 用途 |
 |---|---|
+| [Production-Ready 工程开发规格](docs/production-ready-engineering-spec.md) | 当前主规格，覆盖生产级目标、架构、部署、性能、数据库、接口、风控、执行、观测、测试和任务拆分 |
 | [业务流程与功能清单](docs/business-flow-and-function-list.md) | 业务状态机、主流程、功能边界 |
 | [架构设计文档](docs/architecture-design.md) | 总体架构、部署、技术选型 |
 | [模块关系文档](docs/module-relationship.md) | 模块职责、依赖矩阵、事件关系 |
