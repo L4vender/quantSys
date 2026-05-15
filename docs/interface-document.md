@@ -1,7 +1,7 @@
 # Polymarket / TheRundown 延迟信号系统接口文档
 
-核验日期：2026-05-14  
-来源文档：`docs/deep-research-report.md`
+核验日期：2026-05-15
+来源文档：[1_external_api_contract_spike](1_external_api_contract_spike.md)
 
 ## 0. 接口定版
 
@@ -36,34 +36,48 @@
 | 角色 | 体育赛事和赔率数据源 |
 | 认证 | REST 生产默认 `X-TheRundown-Key` header；WS 使用 query `key` |
 | V2 WS | `wss://therundown.io/api/v2/ws/markets?key=...` |
-| WS 消息 | `connected`、`heartbeat`、`market_price`、`subscribed`、`error` |
-| 关键限制 | Free/Starter/Pro 有固定延迟且无 WebSocket；Ultra 及以上默认实时 + WS |
+| WS 消息 | 生产解析以 `meta.type` 为准：`market_price`、`heartbeat`；未知消息保留 raw 并进入 schema alert |
+| 关键限制 | 非实时套餐或 `X-Websocket-Access=false` 时禁止 live 主信号；WS 消息也按 data points 计量 |
 | 风险字段 | price `0.0001` 表示 off-board sentinel，不可当作真实概率 |
-| 限流 | 429 时遵守 `Retry-After`，并读取剩余配额响应头 |
+| 限流 | 429 时遵守 `Retry-After`，并读取 `X-Datapoints-*`、`X-Rate-Limit`、`X-Data-Delay-Seconds`、`X-Websocket-Access` |
 
 TheRundown V2 WS `market_price` 内部映射示例：
 
 ```json
 {
-  "type": "market_price",
+  "meta": {
+    "type": "market_price",
+    "version": "v2",
+    "timestamp": 1772495104
+  },
   "data": {
-    "event_id": "event-id",
-    "market_id": "moneyline",
-    "affiliate_id": "sportsbook-id",
-    "participant_id": "participant-id",
-    "price": "-110",
-    "line": "235.5",
-    "updated_at": "2026-05-14T03:15:21Z"
+    "id": 193600383,
+    "event_id": "9b9d0cf6007fdaeb15c3a1888dcfd5df",
+    "affiliate_id": 26,
+    "market_participant_id": 19402291,
+    "market_id": 3,
+    "line": "1.5",
+    "price": "-117",
+    "previous_price": "-122.0000",
+    "price_delta": 5,
+    "is_main_line": true,
+    "normalized_market_participant_id": 10,
+    "normalized_market_participant_type": 3,
+    "sport_id": 7,
+    "updated_at": "2026-03-02T23:44:44Z"
   }
 }
 ```
 
 适配规则：
 
-1. `market_price` 只代表一个 sportsbook/market/participant 的价格点。
-2. `heartbeat.data.now` 用于连接健康与 feed clock 估计。
-3. `X-Data-Delay-Seconds > 0` 时，source 自动标记为 delayed，禁止 live 主信号。
-4. `X-Websocket-Access=false` 时，系统不尝试建立 live WS 主链路。
+1. `meta.type=market_price` 只代表一个 sportsbook/market/participant 的价格点。
+2. `data.id` 作为 provider price/change id；`event_id` 是 TheRundown V2 canonical event id。
+3. `normalized_market_participant_id` 优先用于 canonical participant 映射；缺失时降级到 `market_participant_id` 并降低 confidence。
+4. `heartbeat.data.now` 用于连接健康与 feed clock 估计；30 秒内无任何消息时 source stale。
+5. `X-Data-Delay-Seconds > 0` 时，source 自动标记为 delayed，禁止 live 主信号。
+6. `X-Websocket-Access=false` 时，系统不尝试建立 live WS 主链路。
+7. TheRundown WS client 有 256-message buffer 风险，订阅必须按 sport、market、affiliate 或 event 过滤。
 
 ### 2.2 Polymarket
 
@@ -73,19 +87,22 @@ TheRundown V2 WS `market_price` 内部映射示例：
 | 认证 | CLOB 交易使用 L2 API key/secret/passphrase；P0 固定 deposit wallet / `POLY_1271` 签名模式 |
 | Market WS | `wss://ws-subscriptions-clob.polymarket.com/ws/market`，market channel 不鉴权 |
 | User WS | `wss://ws-subscriptions-clob.polymarket.com/ws/user`，user channel 需要认证 |
-| 订阅字段 | market channel 使用 `asset_ids`；user channel 使用 `markets` 即 condition IDs |
+| 订阅字段 | market channel 使用 `assets_ids`；user channel 使用 `markets` 即 condition IDs |
 | Ping/Pong | 客户端每 10 秒 ping，服务端 pong |
-| 速率限制 | 按域和端点分层；CLOB Trading 当前公开口径为 5000 requests / 10s、48000 / 10min |
-| Geoblock | `GET /geoblock` 是 live trading 硬闸门 |
+| 速率限制 | 按官方 Rate Limits 页做域和端点级 token bucket，不在代码中硬编码单一全局值 |
+| Geoblock | `GET https://polymarket.com/api/geoblock` 是 live trading 硬闸门 |
 
 Polymarket market WS 订阅示例：
 
 ```json
 {
   "assets_ids": ["<token_id_1>", "<token_id_2>"],
-  "type": "market"
+  "type": "market",
+  "custom_feature_enabled": true
 }
 ```
+
+`custom_feature_enabled=true` 用于接收 `best_bid_ask`、`new_market`、`market_resolved` 等扩展事件；如果只需要基础 `book`、`price_change`、`last_trade_price`、`tick_size_change`，可以关闭该选项以降低解析面。
 
 Polymarket user WS 订阅示例：
 

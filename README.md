@@ -32,124 +32,92 @@ Polymarket / TheRundown 延迟信号交易系统。
 
 ## 2. 开发顺序原则
 
-后续开发严格按依赖顺序推进。每一阶段只能依赖已经完成的功能，不能调用后面阶段尚未实现的模块。
+后续开发按功能闭环推进，而不是按技术层堆模块。每一阶段只能依赖已经完成的功能，不能调用后面阶段尚未实现的能力。
 
 规则：
 
-1. 先定义共享模型和基础设施，再实现业务服务。
-2. 先 raw 数据接入，再 normalizer，再 mapper，再 latency，再 signal。
-3. 先 paper trading 闭环，再 live execution。
-4. 前端页面只能展示已存在的后端 API；未实现服务不在 UI 中接真实入口。
-5. Live trading 不得绕过 paper、risk、geoblock、heartbeat、audit。
-6. P0 不实现 spread/total live、第二执行 venue、多外部赔率源、Kubernetes、legacy wallet。
+1. Foundation 先完成 API 契约、工程骨架和本地基础设施。
+2. 数据采集先闭环：外部源 -> raw archive -> normalized quote -> mapping -> 数据 API/控制台。
+3. 实盘模拟再闭环：真实行情 -> dry-run signal -> risk -> paper broker -> replay/report -> 模拟控制台。
+4. 真实量化交易最后闭环：mock execution -> 小额 live -> live operations -> production hardening。
+5. 前端页面只能展示已存在的后端 API；未实现服务不在 UI 中接真实入口。
+6. Live trading 不得绕过 paper、risk、geoblock、heartbeat、audit。
+7. P0 不实现 spread/total live、第二执行 venue、多外部赔率源、Kubernetes、legacy wallet。
 
 ## 3. 功能依赖顺序
 
+`docs/3_development_phases.md` 是总索引；每个阶段的完整交付要求已经拆到 `docs/development-phases/` 下的独立文件。
+
 ```mermaid
 flowchart TD
-    A["F0 文档与架构定版"] --> B["F1 Monorepo 与共享模型"]
-    B --> C["F2 本地基础设施"]
-    C --> D["F3 Redpanda topics 与 schema"]
-    D --> E["F4 TheRundown Adapter"]
-    D --> F["F5 Polymarket Market Adapter"]
-    E --> G["F6 Raw Ingest + Object Archive"]
-    F --> G
-    G --> H["F7 Normalizer"]
-    H --> I["F8 Canonical Mapper"]
-    I --> J["F9 Latency Engine"]
-    J --> K["F10 Signal Engine dry-run"]
-    K --> L["F11 Risk Engine"]
-    L --> M["F12 Paper Broker"]
-    M --> N["F13 Replay Service"]
-    N --> O["F14 API Gateway"]
-    O --> P["F15 Frontend Console"]
-    L --> Q["F16 Polymarket User Adapter"]
-    Q --> R["F17 Signer + Execution Gateway"]
-    R --> S["F18 Live small-order verification"]
-    P --> S
-    S --> T["F19 Production runbook + alerts"]
+    A["Phase 0 文档与目标口径"] --> B["Phase 1 外部 API 契约校准"]
+    B --> C["Phase 2 工程骨架与本地基础设施"]
+
+    C --> D1["Phase 3 TheRundown 数据采集"]
+    C --> D2["Phase 4 Polymarket 数据采集"]
+    D1 --> D3["Phase 5 Raw Archive / Source Health"]
+    D2 --> D3
+    D3 --> D4["Phase 6 标准化 / 映射 / 主客队校验"]
+    D4 --> D5["Phase 7 数据查询 API / 采集控制台"]
+
+    D5 --> S1["Phase 8 策略信号 Dry-Run"]
+    S1 --> S2["Phase 9 模拟风控 / Kill Switch"]
+    S2 --> S3["Phase 10 真实行情 Paper Broker"]
+    S3 --> S4["Phase 11 Replay / Backtest"]
+    S4 --> S5["Phase 12 模拟交易控制台 / 准入报告"]
+
+    S5 --> L1["Phase 13 Execution Contract / Mock CLOB"]
+    L1 --> L2["Phase 14 小额 Live 交易演练"]
+    L2 --> L3["Phase 15 Live 策略运营 / 告警联动"]
+    L3 --> L4["Phase 16 生产部署 / 监控 / 故障演练"]
 ```
 
-## 4. 阶段交付逻辑
+## 4. 阶段文件
 
-| 阶段 | 功能 | 只能依赖 | 交付物 | 不允许使用 |
-|---|---|---|---|---|
-| F0 | 文档与架构定版 | 原始研究报告 | `docs/*.md`、本 README | 代码实现假设 |
-| F1 | Monorepo 与共享模型 | F0 | Rust workspace、domain model、config、telemetry skeleton | 外部 API、数据库 |
-| F2 | 本地基础设施 | F1 | Docker Compose、Redpanda、PostgreSQL、ClickHouse、Redis、MinIO | 业务服务 |
-| F3 | Topic 与 schema | F2 | Redpanda topic init、event schema、DLQ schema | adapter 真实数据 |
-| F4 | TheRundown Adapter | F3 | REST bootstrap、V2 WS、tier/limit probe、raw event | normalizer、mapper |
-| F5 | Polymarket Market Adapter | F3 | Gamma/CLOB market discovery、market WS raw event | signal、risk、execution |
-| F6 | Raw Ingest + Archive | F4、F5 | raw topic 持久化、message hash、MinIO archive | normalized quote |
-| F7 | Normalizer | F6 | `NormalizedQuote`、odds conversion、quality flags、ClickHouse write、Redis latest | mapper、signal |
-| F8 | Canonical Mapper | F7 | event/market mapping、confidence、manual override | signal 下单 |
-| F9 | Latency Engine | F8 | source age、offset、lead-lag sample | order intent |
-| F10 | Signal Engine dry-run | F9 | signal event、reject reason、edge 计算 | live order |
-| F11 | Risk Engine | F10 | policy evaluation、kill switch、limits、risk decision | execution gateway |
-| F12 | Paper Broker | F11 | paper order、paper fill、PnL、slippage model | live execution |
-| F13 | Replay Service | F12 | replay job、fixed fixture regression、report | live execution |
-| F14 | API Gateway | F13 | REST/WS for system/source/market/signal/paper/replay/risk | frontend-only mock 数据 |
-| F15 | Frontend Console | F14 | Overview、Market、Strategy、Paper、Replay、Audit、Alert | 未实现 API |
-| F16 | Polymarket User Adapter | F11 | user WS order/fill sync、order state raw events | signed order submit |
-| F17 | Signer + Execution Gateway | F16 | `POLY_1271` signer、pretrade、FAK submit、cancel、heartbeat、audit | 未通过风控的 intent |
-| F18 | Live small-order verification | F17、F15 | 小额下单/撤单/对账演练报告 | 自动扩大 size |
-| F19 | Production Runbook + Alerts | F18 | runbook、alerts、backup/restore、云服务器原生部署、Docker Compose 部署、release checklist | 无审计 live 恢复 |
+| 阶段组 | 阶段 | 文件 | 当前状态 |
+|---|---|---|---|
+| Foundation | Phase 0 | [文档审计与目标口径收敛](docs/development-phases/phase-00-project-audit.md) | Done |
+| Foundation | Phase 1 | [外部 API 契约校准](docs/development-phases/phase-01-external-api-contract.md) | Ready |
+| Foundation | Phase 2 | [工程骨架与本地基础设施](docs/development-phases/phase-02-foundation-infra.md) | Blocked by Phase 1 |
+| 数据采集 | Phase 3 | [TheRundown 数据采集](docs/development-phases/phase-03-therundown-ingestion.md) | Blocked |
+| 数据采集 | Phase 4 | [Polymarket 数据采集](docs/development-phases/phase-04-polymarket-ingestion.md) | Blocked |
+| 数据采集 | Phase 5 | [Raw Archive、采集健康与限流控制](docs/development-phases/phase-05-raw-archive-health.md) | Blocked |
+| 数据采集 | Phase 6 | [标准化、赛事映射与主客队校验](docs/development-phases/phase-06-normalization-mapping.md) | Blocked |
+| 数据采集 | Phase 7 | [数据查询 API、采集控制台与数据质量报告](docs/development-phases/phase-07-data-api-console.md) | Blocked |
+| 实盘模拟 | Phase 8 | [策略信号 Dry-Run](docs/development-phases/phase-08-signal-dry-run.md) | Blocked |
+| 实盘模拟 | Phase 9 | [模拟风控、Kill Switch 与审计](docs/development-phases/phase-09-simulation-risk.md) | Blocked |
+| 实盘模拟 | Phase 10 | [真实行情驱动 Paper Broker](docs/development-phases/phase-10-paper-broker.md) | Blocked |
+| 实盘模拟 | Phase 11 | [Replay / Backtest 与策略报告](docs/development-phases/phase-11-replay-backtest.md) | Blocked |
+| 实盘模拟 | Phase 12 | [模拟交易控制台与 Paper 准入报告](docs/development-phases/phase-12-simulation-console.md) | Blocked |
+| 真实量化交易 | Phase 13 | [Execution Contract、Signer 与 Mock CLOB](docs/development-phases/phase-13-execution-contract-mock.md) | Blocked |
+| 真实量化交易 | Phase 14 | [小额 Live 交易演练](docs/development-phases/phase-14-live-small-order.md) | Blocked |
+| 真实量化交易 | Phase 15 | [Live 策略运营、额度扩大与告警联动](docs/development-phases/phase-15-live-operations.md) | Blocked |
+| 真实量化交易 | Phase 16 | [生产部署、监控、压测与故障演练](docs/development-phases/phase-16-production-deployment.md) | Blocked |
+| 扩展 | Phase 17+ | [后续扩展阶段](docs/development-phases/future-extensions.md) | Later |
 
 ## 5. 当前开发进度
-
-状态定义：
 
 | 状态 | 含义 |
 |---|---|
 | Done | 已完成并验证 |
-| In Progress | 正在实现 |
 | Ready | 前置条件满足，可以开始 |
 | Blocked | 缺少前置条件 |
 | Later | 当前版本不实现 |
 
-进度标识：已完成用 `✅`，进行中用 `[-]`，未完成留空。
-
-| 完成 | ID | 功能 | 状态 | 进度 | 当前产出 | 下一步验收 |
-|---|---|---|---|---:|---|---|
-| ✅ | F0 | 文档与架构定版 | Done | 100% | `docs/production-ready-engineering-spec.md`、`docs/architecture-design.md`、`docs/technical-solution.md`、本 README 等 | 文档无二选一架构、README 有顺序表 |
-|  | F1 | Monorepo 与共享模型 | Ready | 0% | 无代码 | Rust workspace 可编译，domain model 单测通过 |
-|  | F2 | 本地基础设施 | Blocked | 0% | 等待 F1 | `docker compose up` 启动 Redpanda/PostgreSQL/ClickHouse/Redis/MinIO |
-|  | F3 | Topic 与 schema | Blocked | 0% | 等待 F2 | topic init 脚本可重复执行，schema snapshot 通过 |
-|  | F4 | TheRundown Adapter | Blocked | 0% | 等待 F3 | fixture + sandbox key 下 raw event 入 Redpanda |
-|  | F5 | Polymarket Market Adapter | Blocked | 0% | 等待 F3 | market WS fixture 和 live public WS raw event 入 Redpanda |
-|  | F6 | Raw Ingest + Archive | Blocked | 0% | 等待 F4/F5 | raw payload 可按 hash 在 MinIO 找回 |
-|  | F7 | Normalizer | Blocked | 0% | 等待 F6 | TheRundown/Polymarket fixture 转 `NormalizedQuote` |
-|  | F8 | Canonical Mapper | Blocked | 0% | 等待 F7 | full-game moneyline mapping confidence 可计算 |
-|  | F9 | Latency Engine | Blocked | 0% | 等待 F8 | 输出 source age、offset、lead-lag sample |
-|  | F10 | Signal Engine dry-run | Blocked | 0% | 等待 F9 | 只生成 signal/reject，不生成 live order |
-|  | F11 | Risk Engine | Blocked | 0% | 等待 F10 | policy tests 覆盖 kill switch、stale、edge、depth、rate |
-|  | F12 | Paper Broker | Blocked | 0% | 等待 F11 | paper order/fill/PnL 可复现 |
-|  | F13 | Replay Service | Blocked | 0% | 等待 F12 | 固定 replay fixture 结果稳定 |
-|  | F14 | API Gateway | Blocked | 0% | 等待 F13 | REST/WS 聚合真实服务状态 |
-|  | F15 | Frontend Console | Blocked | 0% | 等待 F14 | 页面只使用已实现 API |
-|  | F16 | Polymarket User Adapter | Blocked | 0% | 等待 F11 | user WS order/fill 状态可入库 |
-|  | F17 | Signer + Execution Gateway | Blocked | 0% | 等待 F16 | mock CLOB 下单/撤单/heartbeat 全链路通过 |
-|  | F18 | Live small-order verification | Blocked | 0% | 等待 F17/F15 | 小额 live 演练记录完整 |
-|  | F19 | Production Runbook + Alerts | Blocked | 0% | 等待 F18 | 云服务器原生部署和 Docker Compose 部署均可执行，故障演练和恢复步骤可执行 |
-|  | X1 | Spread/total live 支持 | Later | 0% | 当前不实现 | full-game moneyline 稳定后单独设计 |
-|  | X2 | 第二执行 venue | Later | 0% | 当前不实现 | 单独核验条款、接口和风控 |
-|  | X3 | 多外部赔率源 | Later | 0% | 当前不实现 | 单独核验数据授权和延迟 |
-|  | X4 | Kubernetes | Later | 0% | 当前不实现 | 当前首发必须完成云服务器原生部署与 Docker Compose 部署；Kubernetes 作为高频扩展 profile |
-|  | X5 | Legacy Proxy/Safe wallet | Later | 0% | 当前不实现 | 当前签名定版为 deposit wallet / `POLY_1271` |
+当前下一步是 Phase 1：外部 API 契约校准。它完成后，才能进入 Phase 2 工程骨架和后续数据采集实现。
 
 ## 6. 文档索引
 
 | 文档 | 用途 |
 |---|---|
-| [Production-Ready 工程开发规格](docs/production-ready-engineering-spec.md) | 当前主规格，覆盖生产级目标、架构、部署、性能、数据库、接口、风控、执行、观测、测试和任务拆分 |
-| [业务流程与功能清单](docs/business-flow-and-function-list.md) | 业务状态机、主流程、功能边界 |
-| [架构设计文档](docs/architecture-design.md) | 总体架构、部署、技术选型 |
-| [模块关系文档](docs/module-relationship.md) | 模块职责、依赖矩阵、事件关系 |
-| [数据架构文档](docs/data-architecture.md) | canonical 模型、topic、冷热分层 |
+| [文档收敛记录](docs/0_project_audit.md) | 当前保留文档、已删除旧文档和权威入口 |
+| [外部 API 契约校准 Spike](docs/1_external_api_contract_spike.md) | TheRundown / Polymarket 官方契约、fixture、contract test 和 live 前置门槛 |
+| [目标架构文档](docs/2_architecture_target.md) | 目标架构、服务边界、模块边界、数据面/控制面方向 |
+| [功能化开发阶段总索引](docs/3_development_phases.md) | Foundation、数据采集、实盘模拟、真实量化交易的阶段入口 |
+| [风险与验证计划](docs/4_risk_and_validation_plan.md) | 风险清单、测试矩阵、压测、故障演练和 live 准入门槛 |
+| [部署要求](docs/5_deployment_requirements.md) | 云服务器、Docker Compose、监控、备份、恢复和生产门禁要求 |
 | [接口文档](docs/interface-document.md) | 外部接口、REST/WS、gRPC、事件 schema |
-| [数据库设计文档](docs/database-design.md) | PostgreSQL、ClickHouse、Redis key |
-| [技术方案文档](docs/technical-solution.md) | 技术栈、阶段路线、测试、上线门槛 |
-| [原始研究报告](docs/deep-research-report.md) | 仅作研究输入和溯源，不作为最终架构口径 |
+| [阶段文件目录](docs/development-phases/phase-01-external-api-contract.md) | 每个开发阶段的独立执行文件 |
 
 ## 7. 开发验收硬门槛
 
