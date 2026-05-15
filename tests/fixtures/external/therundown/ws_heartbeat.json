@@ -1,0 +1,20 @@
+{
+  "_fixture_metadata": {
+    "provider": "therundown",
+    "source_type": "mock",
+    "derived_from": "https://docs.therundown.io/api-reference/v2/websocket",
+    "captured_at": "2026-05-15T00:00:00Z",
+    "sanitized": true
+  },
+  "meta": {
+    "type": "heartbeat",
+    "version": "v2",
+    "timestamp": 1778864127
+  },
+  "data": {
+    "now": "2026-05-15T22:15:27Z",
+    "heartbeat_interval_seconds": 15,
+    "stale_after_seconds": 30,
+    "connection_state": "healthy"
+  }
+}

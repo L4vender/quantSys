@@ -1,0 +1,33 @@
+{
+  "_fixture_metadata": {
+    "provider": "therundown",
+    "source_type": "mock",
+    "derived_from": "https://docs.therundown.io/rate-limits",
+    "captured_at": "2026-05-15T00:00:00Z",
+    "sanitized": true
+  },
+  "successful_response_headers": {
+    "X-Tier": "ultra",
+    "X-Rate-Limit": "10",
+    "X-Data-Delay-Seconds": "0",
+    "X-Websocket-Access": "true",
+    "X-Datapoints": "6",
+    "X-Datapoints-Breakdown": "events=1,odds=4,scores=1",
+    "X-Datapoints-Limit": "40000000",
+    "X-Datapoints-Period": "monthly",
+    "X-Datapoints-Remaining": "39999994",
+    "X-Datapoints-Reset": "2026-06-15T14:02:49+00:00",
+    "X-Datapoints-Used": "6"
+  },
+  "rate_limited_response_headers": {
+    "status": 429,
+    "Retry-After": "2",
+    "X-Rate-Limit": "10",
+    "X-Datapoints-Remaining": "0"
+  },
+  "degradation": {
+    "429": "Respect Retry-After, pause the affected endpoint budget, and never reconnect in a tight loop.",
+    "delayed_source": "If X-Data-Delay-Seconds is missing, unknown, or greater than 0, disable live primary signals.",
+    "no_websocket_access": "If X-Websocket-Access is false or unknown, disable live primary signals."
+  }
+}

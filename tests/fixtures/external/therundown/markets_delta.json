@@ -1,0 +1,49 @@
+{
+  "_fixture_metadata": {
+    "provider": "therundown",
+    "source_type": "mock",
+    "derived_from": "https://docs.therundown.io/api-reference/generated/v2-markets/get-market-price-changes-since-a-given-id",
+    "captured_at": "2026-05-15T00:00:00Z",
+    "sanitized": true
+  },
+  "meta": {
+    "schema_version": "therundown.v2.markets_delta.mock.v1",
+    "last_id": "tr_delta_20260515_000001",
+    "next_last_id": "tr_delta_20260515_000004",
+    "stale_cursor_after_minutes": 30,
+    "requires_bootstrap_when_stale": true
+  },
+  "data": [
+    {
+      "id": "tr_price_change_000002",
+      "event_id": "tr_evt_mock_20260515_lal_bos",
+      "sport_id": 4,
+      "affiliate_id": 19,
+      "market_id": 1,
+      "market_participant_id": 9001,
+      "normalized_market_participant_id": 501,
+      "line": null,
+      "price": "-118",
+      "previous_price": "-120",
+      "is_main_line": true,
+      "updated_at": "2026-05-15T22:15:12Z"
+    },
+    {
+      "id": "tr_price_change_000003",
+      "event_id": "tr_evt_mock_20260515_lal_bos",
+      "sport_id": 4,
+      "affiliate_id": 19,
+      "market_id": 1,
+      "market_participant_id": 9002,
+      "normalized_market_participant_id": 502,
+      "line": null,
+      "price": "+102",
+      "previous_price": "+105",
+      "is_main_line": true,
+      "updated_at": "2026-05-15T22:15:12Z"
+    }
+  ],
+  "degradation": {
+    "stale_cursor": "If last_id is older than the provider cursor window, re-run REST bootstrap and resume from the new meta.delta_last_id."
+  }
+}

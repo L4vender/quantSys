@@ -1,0 +1,30 @@
+enabled = false
+api_base_url = "https://therundown.io/api/v2"
+ws_url = "wss://therundown.io/api/v2/ws/markets"
+auth_env = "THERUNDON_API_KEY"
+
+sport_ids = [4]
+market_ids = [1]
+affiliate_ids = [19, 23]
+event_ids = []
+
+heartbeat_timeout_seconds = 15
+stale_after_seconds = 30
+real_time_required = true
+disable_live_signal_when_delayed = true
+
+[reconnect_backoff]
+initial_ms = 500
+max_ms = 30000
+jitter_ms = 250
+max_attempts_before_bootstrap = 3
+
+[rate_budget]
+requests_per_second = 10
+respect_retry_after = true
+rate_limited_disables_live_signal = true
+
+[datapoint_budget]
+monthly_limit = 40000000
+min_remaining_for_live_signal = 100000
+exhausted_disables_live_signal = true

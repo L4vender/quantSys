@@ -1,0 +1,105 @@
+{
+  "meta": {
+    "delta_last_id": "fixture-delta-1"
+  },
+  "events": [
+    {
+      "event_id": "tr_fixture_cin_cle",
+      "sport_id": 3,
+      "event_date": "2026-05-15T23:10:00Z",
+      "score": {
+        "event_status": "STATUS_SCHEDULED",
+        "updated_at": "2026-05-15T14:00:00Z"
+      },
+      "teams": [
+        {
+          "team_id": 31,
+          "name": "Cincinnati",
+          "mascot": "Reds",
+          "abbreviation": "CIN",
+          "is_away": true,
+          "is_home": false
+        },
+        {
+          "team_id": 32,
+          "name": "Cleveland",
+          "mascot": "Guardians",
+          "abbreviation": "CLE",
+          "is_away": false,
+          "is_home": true
+        }
+      ],
+      "schedule": {
+        "league_name": "Major League Baseball",
+        "event_name": "Cincinnati at Cleveland - 2026-05-15T23:10:00Z"
+      },
+      "markets": [
+        {
+          "market_id": 1,
+          "period_id": 0,
+          "name": "moneyline",
+          "participants": [
+            {
+              "id": 31,
+              "type": "TYPE_TEAM",
+              "name": "Cincinnati Reds",
+              "lines": [
+                {
+                  "value": "",
+                  "prices": {
+                    "19": {
+                      "price": 105,
+                      "is_main_line": true,
+                      "updated_at": "2026-05-15T14:01:00Z"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "id": 32,
+              "type": "TYPE_TEAM",
+              "name": "Cleveland Guardians",
+              "lines": [
+                {
+                  "value": "",
+                  "prices": {
+                    "19": {
+                      "price": -125,
+                      "is_main_line": true,
+                      "updated_at": "2026-05-15T14:01:00Z"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event_id": "tr_fixture_lal_bos",
+      "sport_id": 4,
+      "event_date": "2026-05-16T00:00:00Z",
+      "teams": [
+        {"name": "Los Angeles", "mascot": "Lakers", "abbreviation": "LAL", "is_away": true, "is_home": false},
+        {"name": "Boston", "mascot": "Celtics", "abbreviation": "BOS", "is_away": false, "is_home": true}
+      ],
+      "schedule": {
+        "league_name": "National Basketball Association",
+        "event_name": "Los Angeles at Boston - 2026-05-16T00:00:00Z"
+      },
+      "markets": [
+        {
+          "market_id": 1,
+          "period_id": 0,
+          "name": "moneyline",
+          "participants": [
+            {"id": 1, "type": "TYPE_TEAM", "name": "Los Angeles Lakers", "lines": []},
+            {"id": 2, "type": "TYPE_TEAM", "name": "Boston Celtics", "lines": []}
+          ]
+        }
+      ]
+    }
+  ]
+}

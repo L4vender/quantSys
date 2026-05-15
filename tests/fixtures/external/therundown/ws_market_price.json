@@ -1,0 +1,29 @@
+{
+  "_fixture_metadata": {
+    "provider": "therundown",
+    "source_type": "mock",
+    "derived_from": "https://docs.therundown.io/api-reference/v2/websocket",
+    "captured_at": "2026-05-15T00:00:00Z",
+    "sanitized": true
+  },
+  "meta": {
+    "type": "market_price",
+    "version": "v2",
+    "timestamp": 1778864112
+  },
+  "data": {
+    "id": 193600383,
+    "event_id": "tr_evt_mock_20260515_lal_bos",
+    "affiliate_id": 19,
+    "market_id": 1,
+    "market_participant_id": 9001,
+    "normalized_market_participant_id": 501,
+    "line": null,
+    "price": "-118",
+    "previous_price": "-120",
+    "price_delta": 2,
+    "is_main_line": true,
+    "sport_id": 4,
+    "updated_at": "2026-05-15T22:15:12Z"
+  }
+}

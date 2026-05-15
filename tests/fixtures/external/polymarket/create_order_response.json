@@ -1,0 +1,25 @@
+{
+  "_fixture_metadata": {
+    "provider": "polymarket",
+    "source_type": "mock",
+    "derived_from": "https://docs.polymarket.com/developers/CLOB/orders/onchain-order-info",
+    "captured_at": "2026-05-15T00:00:00Z",
+    "sanitized": true,
+    "note": "Mock contract only. This fixture does not authorize or imply real order submission."
+  },
+  "success": true,
+  "orderID": "pm_order_mock_001",
+  "status": "matched",
+  "takingAmount": "45.00",
+  "makingAmount": "22.05",
+  "transactionsHashes": [
+    "pm_tx_hash_mock_001"
+  ],
+  "errorMsg": "",
+  "reconcile": {
+    "required_for_unknown_status": true,
+    "partial_fill_possible": true,
+    "cancelled_remainder_possible": true,
+    "live_order_type": "FAK_MARKETABLE_LIMIT"
+  }
+}

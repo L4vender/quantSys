@@ -1,0 +1,58 @@
+{
+  "_fixture_metadata": {
+    "provider": "therundown",
+    "source_type": "mock",
+    "derived_from": "https://docs.therundown.io/api-reference/v2/events",
+    "captured_at": "2026-05-15T00:00:00Z",
+    "sanitized": true
+  },
+  "meta": {
+    "schema_version": "therundown.v2.events_bootstrap.mock.v1",
+    "sport_id": 4,
+    "date": "2026-05-15",
+    "delta_last_id": "tr_delta_20260515_000001",
+    "data_delay_seconds": 0
+  },
+  "events": [
+    {
+      "event_id": "tr_evt_mock_20260515_lal_bos",
+      "sport_id": 4,
+      "event_date": "2026-05-15T23:30:00Z",
+      "status": "scheduled",
+      "home_team": {
+        "team_id": 1001,
+        "normalized_team_id": 501,
+        "name": "Boston Celtics"
+      },
+      "away_team": {
+        "team_id": 1002,
+        "normalized_team_id": 502,
+        "name": "Los Angeles Lakers"
+      },
+      "markets": [
+        {
+          "market_id": 1,
+          "market_type": "moneyline",
+          "period": "full_game",
+          "affiliate_id": 19,
+          "participants": [
+            {
+              "market_participant_id": 9001,
+              "normalized_market_participant_id": 501,
+              "side": "home",
+              "price": "-120",
+              "is_main_line": true
+            },
+            {
+              "market_participant_id": 9002,
+              "normalized_market_participant_id": 502,
+              "side": "away",
+              "price": "+105",
+              "is_main_line": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

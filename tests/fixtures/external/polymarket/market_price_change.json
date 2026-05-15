@@ -1,0 +1,30 @@
+{
+  "_fixture_metadata": {
+    "provider": "polymarket",
+    "source_type": "mock",
+    "derived_from": "https://docs.polymarket.com/api-reference/wss/market",
+    "captured_at": "2026-05-15T00:00:00Z",
+    "sanitized": true
+  },
+  "event_type": "price_change",
+  "market": "pm_condition_mock_lal_bos_moneyline",
+  "timestamp": "1778864115000",
+  "changes": [
+    {
+      "asset_id": "pm_asset_yes_mock_001",
+      "side": "BUY",
+      "price": "0.49",
+      "size": "300.00",
+      "best_bid": "0.47",
+      "best_ask": "0.49"
+    },
+    {
+      "asset_id": "pm_asset_no_mock_001",
+      "side": "SELL",
+      "price": "0.52",
+      "size": "275.00",
+      "best_bid": "0.51",
+      "best_ask": "0.53"
+    }
+  ]
+}

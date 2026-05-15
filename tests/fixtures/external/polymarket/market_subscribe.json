@@ -1,0 +1,15 @@
+{
+  "_fixture_metadata": {
+    "provider": "polymarket",
+    "source_type": "mock",
+    "derived_from": "https://docs.polymarket.com/api-reference/wss/market",
+    "captured_at": "2026-05-15T00:00:00Z",
+    "sanitized": true
+  },
+  "type": "market",
+  "assets_ids": [
+    "pm_asset_yes_mock_001",
+    "pm_asset_no_mock_001"
+  ],
+  "custom_feature_enabled": true
+}

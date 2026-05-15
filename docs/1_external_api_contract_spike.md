@@ -82,6 +82,18 @@
 4. [3_development_phases](3_development_phases.md) 的数据采集阶段引用本 spike 的产物，不再写“官方 fixture 待确认”。
 5. 若无法获得实时 TheRundown 权限或 Polymarket 合规交易环境，后续阶段只能进入 dry-run/paper/replay，不允许 live execution。
 
-## 8. 非目标
+## 8. Phase 1 产物
+
+本仓库当前 Phase 1 产物：
+
+- 契约报告：[`docs/reports/external-api-contract-spike-2026-05-15.md`](reports/external-api-contract-spike-2026-05-15.md)
+- Adapter 契约基线：[`docs/adapters/api-contract-baseline.md`](adapters/api-contract-baseline.md)
+- Contract manifest：[`tests/contract/external_api_contract_manifest.yaml`](../tests/contract/external_api_contract_manifest.yaml)
+- TheRundown fixtures：[`tests/fixtures/external/therundown/`](../tests/fixtures/external/therundown/)
+- Polymarket fixtures：[`tests/fixtures/external/polymarket/`](../tests/fixtures/external/polymarket/)
+- Source config examples：[`configs/sources/`](../configs/sources/)
+- 验收命令：`make contract-test`
+
+## 9. 非目标
 
 本 spike 不实现策略、风控、paper broker、真实下单或前端页面；它只负责把外部 API 的真实契约变成可测试、可追溯、可回归的输入。

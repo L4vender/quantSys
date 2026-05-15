@@ -1,0 +1,152 @@
+schema_version: external-api-contract-manifest.v1
+generated_at: 2026-05-15T00:00:00Z
+fixtures:
+  - fixture_path: tests/fixtures/external/therundown/events_bootstrap.json
+    provider: therundown
+    channel: rest
+    message_type: events_bootstrap
+    source_type: mock
+    source_url: https://docs.therundown.io/api-reference/v2/events
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: therundown.v2.events_bootstrap.mock.v1
+    blocking_level: adapter
+    notes: "Doc-derived mock. Canonical event_id and meta.delta_last_id are required for adapter bootstrap."
+  - fixture_path: tests/fixtures/external/therundown/markets_delta.json
+    provider: therundown
+    channel: rest
+    message_type: markets_delta
+    source_type: mock
+    source_url: https://docs.therundown.io/api-reference/generated/v2-markets/get-market-price-changes-since-a-given-id
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: therundown.v2.markets_delta.mock.v1
+    blocking_level: source_health
+    notes: "Doc-derived mock. last_id staleness requires REST bootstrap and resume from meta.delta_last_id."
+  - fixture_path: tests/fixtures/external/therundown/ws_market_price.json
+    provider: therundown
+    channel: websocket
+    message_type: market_price
+    source_type: mock
+    source_url: https://docs.therundown.io/api-reference/v2/websocket
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: therundown.v2.ws_market_price.mock.v1
+    blocking_level: adapter
+    notes: "Doc-derived mock covering required market_price parser fields."
+  - fixture_path: tests/fixtures/external/therundown/ws_heartbeat.json
+    provider: therundown
+    channel: websocket
+    message_type: heartbeat
+    source_type: mock
+    source_url: https://docs.therundown.io/api-reference/v2/websocket
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: therundown.v2.ws_heartbeat.mock.v1
+    blocking_level: source_health
+    notes: "Doc-derived mock for 15-second heartbeat and 30-second stale timeout."
+  - fixture_path: tests/fixtures/external/therundown/rate_limit_headers.json
+    provider: therundown
+    channel: rest
+    message_type: rate_limit_headers
+    source_type: mock
+    source_url: https://docs.therundown.io/rate-limits
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: therundown.v2.rate_limit_headers.mock.v1
+    blocking_level: live_signal
+    notes: "Mock includes entitlement and 429/Retry-After degradation headers. Live probe values are summarized only in the report."
+  - fixture_path: tests/fixtures/external/therundown/off_board_price.json
+    provider: therundown
+    channel: websocket
+    message_type: market_price_off_board
+    source_type: mock
+    source_url: https://docs.therundown.io/api-reference/v2/websocket
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: therundown.v2.off_board_price.mock.v1
+    blocking_level: live_signal
+    notes: "price=0.0001 is the off-board sentinel and must not enter probability or signal calculations."
+  - fixture_path: tests/fixtures/external/polymarket/market_subscribe.json
+    provider: polymarket
+    channel: websocket_market
+    message_type: market_subscribe
+    source_type: mock
+    source_url: https://docs.polymarket.com/api-reference/wss/market
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: polymarket.ws.market_subscribe.mock.v1
+    blocking_level: adapter
+    notes: "Doc-derived mock. Uses assets_ids, not asset_ids."
+  - fixture_path: tests/fixtures/external/polymarket/market_book.json
+    provider: polymarket
+    channel: websocket_market
+    message_type: book
+    source_type: mock
+    source_url: https://docs.polymarket.com/api-reference/wss/market
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: polymarket.ws.book.mock.v1
+    blocking_level: adapter
+    notes: "Doc-derived mock for orderbook snapshot parsing."
+  - fixture_path: tests/fixtures/external/polymarket/market_price_change.json
+    provider: polymarket
+    channel: websocket_market
+    message_type: price_change
+    source_type: mock
+    source_url: https://docs.polymarket.com/api-reference/wss/market
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: polymarket.ws.price_change.mock.v1
+    blocking_level: adapter
+    notes: "Doc-derived mock for top-of-book price change parsing."
+  - fixture_path: tests/fixtures/external/polymarket/market_best_bid_ask.json
+    provider: polymarket
+    channel: websocket_market
+    message_type: best_bid_ask
+    source_type: mock
+    source_url: https://docs.polymarket.com/api-reference/wss/market
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: polymarket.ws.best_bid_ask.mock.v1
+    blocking_level: adapter
+    notes: "Extended market event available when custom_feature_enabled=true."
+  - fixture_path: tests/fixtures/external/polymarket/user_order_update.json
+    provider: polymarket
+    channel: websocket_user
+    message_type: order_update
+    source_type: mock
+    source_url: https://docs.polymarket.com/api-reference/wss/user
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields:
+      - auth.apiKey
+      - auth.secret
+      - auth.passphrase
+      - order.signature
+    schema_version: polymarket.ws.user_order_update.mock.v1
+    blocking_level: live_execution
+    notes: "Mock user channel order update. Placeholder auth fields are scrubbed and must never contain live credentials."
+  - fixture_path: tests/fixtures/external/polymarket/geoblock_blocked.json
+    provider: polymarket
+    channel: rest
+    message_type: geoblock
+    source_type: mock
+    source_url: https://docs.polymarket.com/api-reference/geoblock
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields:
+      - ip
+    schema_version: polymarket.rest.geoblock.mock.v1
+    blocking_level: live_execution
+    notes: "blocked=true is a live execution fail-closed gate."
+  - fixture_path: tests/fixtures/external/polymarket/create_order_response.json
+    provider: polymarket
+    channel: rest_clob
+    message_type: create_order_response
+    source_type: mock
+    source_url: https://docs.polymarket.com/developers/CLOB/orders/onchain-order-info
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields:
+      - transactionsHashes
+    schema_version: polymarket.rest.create_order_response.mock.v1
+    blocking_level: live_execution
+    notes: "Mock contract only; does not permit real submission. P0 live order remains marketable limit + FAK with reconcile."

@@ -1,0 +1,73 @@
+[
+  {
+    "id": "pm_event_cin_cle",
+    "slug": "mlb-cin-cle-2026-05-15",
+    "title": "Cincinnati Reds vs. Cleveland Guardians",
+    "description": "In the upcoming MLB game between the Cincinnati Reds and Cleveland Guardians, scheduled for May 15 at 7:10PM ET.",
+    "startDate": "2026-05-09T21:14:30.570573Z",
+    "creationDate": "2026-05-15T23:10:00Z",
+    "endDate": "2026-05-22T23:10:00Z",
+    "active": true,
+    "closed": false,
+    "enableOrderBook": true,
+    "markets": [
+      {
+        "id": "pm_market_cin_cle",
+        "conditionId": "0xfixturecincle",
+        "question": "Cincinnati Reds vs. Cleveland Guardians",
+        "slug": "mlb-cin-cle-2026-05-15",
+        "outcomes": "[\"Cincinnati Reds\", \"Cleveland Guardians\"]",
+        "clobTokenIds": "[\"pm_token_cin\", \"pm_token_cle\"]",
+        "active": true,
+        "closed": false,
+        "enableOrderBook": true,
+        "startDate": "2026-05-09T21:14:30.570573Z",
+        "endDate": "2026-05-22T23:10:00Z"
+      }
+    ]
+  },
+  {
+    "id": "pm_event_lal_bos_reversed",
+    "slug": "nba-bos-lal-2026-05-16",
+    "title": "Boston Celtics vs. Los Angeles Lakers",
+    "description": "In the upcoming NBA game between the Boston Celtics and Los Angeles Lakers, scheduled for May 15 at 8:00PM ET.",
+    "creationDate": "2026-05-16T00:00:00Z",
+    "active": true,
+    "closed": false,
+    "enableOrderBook": true,
+    "markets": [
+      {
+        "id": "pm_market_lal_bos",
+        "conditionId": "0xfixturelalbos",
+        "question": "Boston Celtics vs. Los Angeles Lakers",
+        "slug": "nba-bos-lal-2026-05-16",
+        "outcomes": "[\"Boston Celtics\", \"Los Angeles Lakers\"]",
+        "clobTokenIds": "[\"pm_token_bos\", \"pm_token_lal\"]",
+        "active": true,
+        "closed": false,
+        "enableOrderBook": true
+      }
+    ]
+  },
+  {
+    "id": "pm_event_series",
+    "slug": "nba-playoffs-who-will-win-series-cavaliers-vs-pistons",
+    "title": "NBA Playoffs: Who Will Win Series? - Cavaliers vs. Pistons",
+    "creationDate": "2026-05-15T23:10:00Z",
+    "active": true,
+    "closed": false,
+    "enableOrderBook": true,
+    "markets": [
+      {
+        "id": "pm_market_series",
+        "conditionId": "0xfixtureseries",
+        "question": "Who will win the series, Cavaliers or Pistons?",
+        "outcomes": "[\"Cavaliers\", \"Pistons\"]",
+        "clobTokenIds": "[\"pm_token_cavs\", \"pm_token_pistons\"]",
+        "active": true,
+        "closed": false,
+        "enableOrderBook": true
+      }
+    ]
+  }
+]

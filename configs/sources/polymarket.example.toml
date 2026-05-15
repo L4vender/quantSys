@@ -1,0 +1,52 @@
+enabled = false
+clob_api_base_url = "https://clob.polymarket.com"
+market_ws_url = "wss://ws-subscriptions-clob.polymarket.com/ws/market"
+user_ws_url = "wss://ws-subscriptions-clob.polymarket.com/ws/user"
+geoblock_url = "https://polymarket.com/api/geoblock"
+heartbeat_interval_seconds = 10
+stale_after_seconds = 30
+custom_feature_enabled = true
+execution_enabled = false
+geoblock_required = true
+signing_mode = "POLY_1271"
+wallet_mode = "deposit_wallet"
+live_order_type = "FAK_MARKETABLE_LIMIT"
+
+[l2_auth_env]
+api_key = "POLYMARKET_API_KEY"
+secret = "POLYMARKET_SECRET"
+passphrase = "POLYMARKET_PASSPHRASE"
+private_key = "POLYMARKET_PRIVATE_KEY"
+
+[market_channel]
+type = "market"
+assets_ids = []
+
+[user_channel]
+type = "user"
+markets = []
+
+[reconnect_backoff]
+initial_ms = 500
+max_ms = 30000
+jitter_ms = 250
+
+[rate_budgets_by_endpoint.market_ws]
+scope = "websocket_market"
+budget_kind = "endpoint"
+limit = "official_doc_configured"
+
+[rate_budgets_by_endpoint.user_ws]
+scope = "websocket_user"
+budget_kind = "endpoint"
+limit = "official_doc_configured"
+
+[rate_budgets_by_endpoint.clob_orders]
+scope = "rest_clob_orders"
+budget_kind = "endpoint"
+limit = "official_doc_configured"
+
+[rate_budgets_by_endpoint.geoblock]
+scope = "rest_geoblock"
+budget_kind = "endpoint"
+limit = "official_doc_configured"

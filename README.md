@@ -77,8 +77,8 @@ flowchart TD
 | 阶段组 | 阶段 | 文件 | 当前状态 |
 |---|---|---|---|
 | Foundation | Phase 0 | [文档审计与目标口径收敛](docs/development-phases/phase-00-project-audit.md) | Done |
-| Foundation | Phase 1 | [外部 API 契约校准](docs/development-phases/phase-01-external-api-contract.md) | Ready |
-| Foundation | Phase 2 | [工程骨架与本地基础设施](docs/development-phases/phase-02-foundation-infra.md) | Blocked by Phase 1 |
+| Foundation | Phase 1 | [外部 API 契约校准](docs/development-phases/phase-01-external-api-contract.md) | Done |
+| Foundation | Phase 2 | [工程骨架与本地基础设施](docs/development-phases/phase-02-foundation-infra.md) | Ready |
 | 数据采集 | Phase 3 | [TheRundown 数据采集](docs/development-phases/phase-03-therundown-ingestion.md) | Blocked |
 | 数据采集 | Phase 4 | [Polymarket 数据采集](docs/development-phases/phase-04-polymarket-ingestion.md) | Blocked |
 | 数据采集 | Phase 5 | [Raw Archive、采集健康与限流控制](docs/development-phases/phase-05-raw-archive-health.md) | Blocked |
@@ -104,7 +104,7 @@ flowchart TD
 | Blocked | 缺少前置条件 |
 | Later | 当前版本不实现 |
 
-当前下一步是 Phase 1：外部 API 契约校准。它完成后，才能进入 Phase 2 工程骨架和后续数据采集实现。
+当前下一步是 Phase 2：工程骨架与本地基础设施。Phase 1 已完成外部 API 契约基线、脱敏 fixture、contract manifest、source config 样例和 contract smoke test；live execution 仍必须等待后续 paper、risk、geoblock、heartbeat、audit 与 execution mock 阶段通过。
 
 ## 6. 文档索引
 
@@ -112,6 +112,8 @@ flowchart TD
 |---|---|
 | [文档收敛记录](docs/0_project_audit.md) | 当前保留文档、已删除旧文档和权威入口 |
 | [外部 API 契约校准 Spike](docs/1_external_api_contract_spike.md) | TheRundown / Polymarket 官方契约、fixture、contract test 和 live 前置门槛 |
+| [Phase 1 契约报告](docs/reports/external-api-contract-spike-2026-05-15.md) | TheRundown / Polymarket 探测结果、未知项、降级策略和 Phase 2 准入结论 |
+| [Adapter 契约基线](docs/adapters/api-contract-baseline.md) | `RawMessage`、`NormalizedQuote`、`SourceState` 字段与 provider 映射规则 |
 | [目标架构文档](docs/2_architecture_target.md) | 目标架构、服务边界、模块边界、数据面/控制面方向 |
 | [功能化开发阶段总索引](docs/3_development_phases.md) | Foundation、数据采集、实盘模拟、真实量化交易的阶段入口 |
 | [风险与验证计划](docs/4_risk_and_validation_plan.md) | 风险清单、测试矩阵、压测、故障演练和 live 准入门槛 |

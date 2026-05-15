@@ -1,0 +1,16 @@
+{
+  "_fixture_metadata": {
+    "provider": "polymarket",
+    "source_type": "mock",
+    "derived_from": "https://docs.polymarket.com/api-reference/geoblock",
+    "captured_at": "2026-05-15T00:00:00Z",
+    "sanitized": true
+  },
+  "blocked": true,
+  "country": "US",
+  "region": "NY",
+  "ip": "<redacted-ip>",
+  "degradation": {
+    "geoblock": "blocked=true is a live execution hard gate; execution must fail closed."
+  }
+}

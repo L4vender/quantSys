@@ -44,6 +44,8 @@
 | Phase 16 | 真实量化交易 | [生产部署、监控、压测与故障演练](development-phases/phase-16-production-deployment.md) |
 | Phase 17+ | 扩展 | [后续扩展阶段](development-phases/future-extensions.md) |
 
-## 下一阶段入口
+## 当前阶段入口
 
-当前应从 [Phase 1：外部 API 契约校准](development-phases/phase-01-external-api-contract.md) 开始。Phase 1 完成前，不应进入真实 adapter 开发。
+Phase 1 外部 API 契约校准已产出契约报告、脱敏 fixture、contract manifest、source config 样例、adapter 契约基线和 `make contract-test` smoke test。当前应从 [Phase 2：工程骨架与本地基础设施](development-phases/phase-02-foundation-infra.md) 开始。
+
+进入 Phase 2 不代表允许 live execution。真实执行仍必须等待后续 paper、risk、geoblock、heartbeat、audit、mock execution 和小额 live 演练阶段通过。
