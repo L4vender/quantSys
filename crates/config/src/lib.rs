@@ -43,6 +43,10 @@ pub struct TheRundownConfig {
     pub event_ids: Vec<String>,
     pub heartbeat_timeout_seconds: u64,
     pub stale_after_seconds: u64,
+    pub rest_timeout_ms: u64,
+    pub ws_connect_timeout_ms: u64,
+    pub max_reconnect_attempts: u32,
+    pub subscription_filters_required: bool,
     pub real_time_required: bool,
     pub disable_live_signal_when_delayed: bool,
     pub reconnect_backoff: ReconnectBackoffConfig,
@@ -147,12 +151,7 @@ impl SourceConfigs {
     }
 
     fn validate(&self) -> Result<(), ConfigError> {
-        if self.therundown.stale_after_seconds <= self.therundown.heartbeat_timeout_seconds {
-            return Err(ConfigError::Invalid(
-                "therundown stale_after_seconds must be greater than heartbeat_timeout_seconds"
-                    .to_string(),
-            ));
-        }
+        validate_therundown(&self.therundown)?;
         if self.polymarket.stale_after_seconds <= self.polymarket.heartbeat_interval_seconds {
             return Err(ConfigError::Invalid(
                 "polymarket stale_after_seconds must be greater than heartbeat_interval_seconds"
@@ -180,6 +179,14 @@ struct RawTheRundownConfig {
     event_ids: Vec<String>,
     heartbeat_timeout_seconds: u64,
     stale_after_seconds: u64,
+    #[serde(default = "default_rest_timeout_ms")]
+    rest_timeout_ms: u64,
+    #[serde(default = "default_ws_connect_timeout_ms")]
+    ws_connect_timeout_ms: u64,
+    #[serde(default = "default_max_reconnect_attempts")]
+    max_reconnect_attempts: u32,
+    #[serde(default = "default_subscription_filters_required")]
+    subscription_filters_required: bool,
     real_time_required: bool,
     disable_live_signal_when_delayed: bool,
     reconnect_backoff: ReconnectBackoffConfig,
@@ -241,6 +248,10 @@ fn read_therundown(path: impl AsRef<Path>) -> Result<TheRundownConfig, ConfigErr
         event_ids: raw.event_ids,
         heartbeat_timeout_seconds: raw.heartbeat_timeout_seconds,
         stale_after_seconds: raw.stale_after_seconds,
+        rest_timeout_ms: raw.rest_timeout_ms,
+        ws_connect_timeout_ms: raw.ws_connect_timeout_ms,
+        max_reconnect_attempts: raw.max_reconnect_attempts,
+        subscription_filters_required: raw.subscription_filters_required,
         real_time_required: raw.real_time_required,
         disable_live_signal_when_delayed: raw.disable_live_signal_when_delayed,
         reconnect_backoff: raw.reconnect_backoff,
@@ -279,6 +290,41 @@ fn read_polymarket(path: impl AsRef<Path>) -> Result<PolymarketConfig, ConfigErr
     })
 }
 
+impl TheRundownConfig {
+    pub fn load_from_file(path: impl AsRef<Path>) -> Result<Self, ConfigError> {
+        let config = read_therundown(path)?;
+        validate_therundown(&config)?;
+        Ok(config)
+    }
+
+    pub fn auth_env_name(&self) -> &str {
+        match &self.auth {
+            SecretRef::Env(name) => name,
+        }
+    }
+}
+
+fn validate_therundown(config: &TheRundownConfig) -> Result<(), ConfigError> {
+    if config.stale_after_seconds <= config.heartbeat_timeout_seconds {
+        return Err(ConfigError::Invalid(
+            "therundown stale_after_seconds must be greater than heartbeat_timeout_seconds"
+                .to_string(),
+        ));
+    }
+    if config.subscription_filters_required
+        && config.sport_ids.is_empty()
+        && config.market_ids.is_empty()
+        && config.affiliate_ids.is_empty()
+        && config.event_ids.is_empty()
+    {
+        return Err(ConfigError::Invalid(
+            "therundown production subscriptions require sport_ids, market_ids, affiliate_ids, or event_ids"
+                .to_string(),
+        ));
+    }
+    Ok(())
+}
+
 fn read_toml<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<T, ConfigError> {
     let text = fs::read_to_string(path).map_err(|source| ConfigError::Read {
         path: path.display().to_string(),
@@ -308,4 +354,20 @@ fn parse_bool(name: &str, value: &str) -> Result<bool, ConfigError> {
             "{name} must be a boolean override"
         ))),
     }
+}
+
+fn default_rest_timeout_ms() -> u64 {
+    5_000
+}
+
+fn default_ws_connect_timeout_ms() -> u64 {
+    5_000
+}
+
+fn default_max_reconnect_attempts() -> u32 {
+    5
+}
+
+fn default_subscription_filters_required() -> bool {
+    true
 }

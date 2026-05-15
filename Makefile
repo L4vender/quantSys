@@ -1,4 +1,4 @@
-.PHONY: contract-test test-contract mapping-test live-mapping fmt clippy test compose-up compose-down migrate-local topic-init topic-init-dry-run
+.PHONY: contract-test test-contract therundown-test therundown-contract-test therundown-integration-test therundown-mock therundown-live-probe adapter-therundown mapping-test live-mapping fmt clippy test check compose-up compose-down migrate-local topic-init topic-init-dry-run
 
 contract-test:
 	python3 scripts/contract/check_external_api_contract.py
@@ -13,6 +13,32 @@ clippy:
 
 test:
 	cargo test --workspace
+
+check: fmt clippy test contract-test therundown-test
+
+therundown-test:
+	cargo test -p quantsys-source-sdk --test therundown_unit
+	cargo test -p quantsys-source-sdk --test therundown_integration
+	cargo test -p adapter-therundown
+
+therundown-contract-test: contract-test therundown-test
+
+therundown-integration-test:
+	cargo test -p quantsys-source-sdk --test therundown_integration
+
+adapter-therundown:
+	cargo build -p adapter-therundown
+
+therundown-mock:
+	cargo test -p quantsys-source-sdk --test therundown_integration mock_rest_bootstrap_publishes_raw_therundown_and_updates_cursor -- --nocapture
+
+therundown-live-probe:
+	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; \
+	if [ -z "$${THERUNDON_API_KEY:-}" ]; then \
+		echo "THERUNDON_API_KEY is not set; skipping live TheRundown probe"; \
+		exit 1; \
+	fi; \
+	cargo run -p adapter-therundown -- --config configs/sources/therundown.example.toml --mode probe
 
 compose-up:
 	docker compose -f deploy/docker-compose/docker-compose.yml --profile local up -d

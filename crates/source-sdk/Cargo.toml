@@ -12,5 +12,18 @@ path = "src/lib.rs"
 [dependencies]
 async-trait.workspace = true
 chrono.workspace = true
+futures-util.workspace = true
+quantsys-config = { path = "../config" }
 quantsys-domain = { path = "../domain" }
+quantsys-eventbus = { path = "../eventbus" }
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
+tokio-tungstenite.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

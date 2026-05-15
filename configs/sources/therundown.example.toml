@@ -10,6 +10,10 @@ event_ids = []
 
 heartbeat_timeout_seconds = 15
 stale_after_seconds = 30
+rest_timeout_ms = 5000
+ws_connect_timeout_ms = 5000
+max_reconnect_attempts = 5
+subscription_filters_required = true
 real_time_required = true
 disable_live_signal_when_delayed = true
 

@@ -19,4 +19,5 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
       - run: make contract-test
+      - run: make therundown-test
       - run: python3 scripts/topic-init/topic_init.py --dry-run

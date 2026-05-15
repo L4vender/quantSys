@@ -18,6 +18,10 @@ Topic catalog 的源文件是 `scripts/topic-init/topics.toml`，由 `crates/eve
 | `paper.fill` | `paper_order_id` | `paper-broker` | `replay`, `api`, `analytics` | 180d | 3 |
 | `dlq.raw` | `message_hash` | `any-service` | `operator`, `replay` | 30d | 3 |
 
+## `raw.therundown` Schema
+
+Phase 3 `adapter-therundown` publishes `RawMessage` only. `provider=therundown`; `source_channel` is one of `rest_bootstrap`, `rest_delta`, or `ws_market`; provider ids are copied from TheRundown payload when present; `payload_hash` and `raw_id` are deterministic; `payload` is the raw external JSON and never includes `X-TheRundown-Key`, websocket query `key`, or other auth material. WebSocket `heartbeat` and unknown `meta.type` messages are preserved as raw payloads; missing required fields are sent to the adapter DLQ sink instead of fabricating ids.
+
 ## Phase 2 约束
 
 - `order.intent`、`risk.decision`、`execution.*`、`paper.fill` 在 Phase 2 只是未来链路的 topic metadata。

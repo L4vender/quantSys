@@ -7,6 +7,7 @@ members = [
     "crates/storage",
     "crates/source-sdk",
     "crates/test-support",
+    "services/adapter-therundown",
     "services/api-gateway",
 ]
 resolver = "2"
@@ -22,16 +23,21 @@ anyhow = "1.0"
 async-trait = "0.1"
 axum = { version = "0.8", features = ["macros"] }
 chrono = { version = "0.4", features = ["clock", "serde"] }
+clap = { version = "4.5", features = ["derive"] }
+futures-util = "0.3"
 prometheus = "0.13"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 sha2 = "0.10"
 tempfile = "3.15"
 thiserror = "2.0"
-tokio = { version = "1.43", features = ["macros", "net", "rt-multi-thread", "signal"] }
+tokio = { version = "1.43", features = ["macros", "net", "rt-multi-thread", "signal", "time"] }
+tokio-tungstenite = { version = "0.28", features = ["rustls-tls-webpki-roots"] }
 toml = "0.8"
 tower = { version = "0.5", features = ["util"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+url = "2.5"
 uuid = { version = "1.12", features = ["serde", "v4"] }

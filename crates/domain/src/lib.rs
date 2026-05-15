@@ -57,6 +57,12 @@ pub enum SourceStatus {
     Degraded,
     Stale,
     RateLimited,
+    AuthFailed,
+    DataDelayDetected,
+    NoWebsocketAccess,
+    DatapointsExhausted,
+    CursorStale,
+    SchemaError,
     Blocked,
     Unknown,
 }

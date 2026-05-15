@@ -3,6 +3,7 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
@@ -118,6 +119,43 @@ pub struct EventEnvelope {
     pub payload: Vec<u8>,
     pub offset: i64,
     pub partition: i32,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct InMemoryEventProducer {
+    events: Arc<Mutex<Vec<EventEnvelope>>>,
+}
+
+impl InMemoryEventProducer {
+    pub fn events(&self) -> Vec<EventEnvelope> {
+        self.events
+            .lock()
+            .expect("event producer mutex poisoned")
+            .clone()
+    }
+
+    pub fn clear(&self) {
+        self.events
+            .lock()
+            .expect("event producer mutex poisoned")
+            .clear();
+    }
+}
+
+#[async_trait]
+impl EventProducer for InMemoryEventProducer {
+    async fn publish(&self, topic: &str, key: &[u8], payload: &[u8]) -> Result<(), EventbusError> {
+        let mut events = self.events.lock().expect("event producer mutex poisoned");
+        let offset = events.len() as i64;
+        events.push(EventEnvelope {
+            topic: topic.to_string(),
+            key: key.to_vec(),
+            payload: payload.to_vec(),
+            offset,
+            partition: 0,
+        });
+        Ok(())
+    }
 }
 
 #[derive(Debug, Deserialize)]
