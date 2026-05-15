@@ -1,0 +1,16 @@
+[package]
+name = "quantsys-eventbus"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "quantsys_eventbus"
+path = "src/lib.rs"
+
+[dependencies]
+async-trait.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+toml.workspace = true

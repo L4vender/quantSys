@@ -78,7 +78,7 @@ flowchart TD
 |---|---|---|---|
 | Foundation | Phase 0 | [文档审计与目标口径收敛](docs/development-phases/phase-00-project-audit.md) | Done |
 | Foundation | Phase 1 | [外部 API 契约校准](docs/development-phases/phase-01-external-api-contract.md) | Done |
-| Foundation | Phase 2 | [工程骨架与本地基础设施](docs/development-phases/phase-02-foundation-infra.md) | Ready |
+| Foundation | Phase 2 | [工程骨架与本地基础设施](docs/development-phases/phase-02-foundation-infra.md) | Implemented |
 | 数据采集 | Phase 3 | [TheRundown 数据采集](docs/development-phases/phase-03-therundown-ingestion.md) | Blocked |
 | 数据采集 | Phase 4 | [Polymarket 数据采集](docs/development-phases/phase-04-polymarket-ingestion.md) | Blocked |
 | 数据采集 | Phase 5 | [Raw Archive、采集健康与限流控制](docs/development-phases/phase-05-raw-archive-health.md) | Blocked |
@@ -100,11 +100,24 @@ flowchart TD
 | 状态 | 含义 |
 |---|---|
 | Done | 已完成并验证 |
+| Implemented | 已实现，等待目标运行环境完整烟测 |
 | Ready | 前置条件满足，可以开始 |
 | Blocked | 缺少前置条件 |
 | Later | 当前版本不实现 |
 
-当前下一步是 Phase 2：工程骨架与本地基础设施。Phase 1 已完成外部 API 契约基线、脱敏 fixture、contract manifest、source config 样例和 contract smoke test；live execution 仍必须等待后续 paper、risk、geoblock、heartbeat、audit 与 execution mock 阶段通过。
+当前状态：**Phase 2 Foundation Implemented**。Phase 1 已完成外部 API 契约基线、脱敏 fixture、contract manifest、source config 样例和 contract smoke test；Phase 2 已新增 Rust workspace、本地依赖、migration、topic init、CI 和最小健康服务。live execution 仍必须等待后续 paper、risk、geoblock、heartbeat、audit 与 execution mock 阶段通过。
+
+Phase 2 本地验证：
+
+```bash
+make fmt
+make clippy
+make test
+make contract-test
+make topic-init-dry-run
+```
+
+本地依赖启动与 migration 见 [Phase 2 Foundation And Local Infra](docs/development/phase-02-foundation-and-local-infra.md)。
 
 ## 6. 文档索引
 

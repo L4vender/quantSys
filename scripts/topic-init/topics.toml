@@ -1,0 +1,116 @@
+[[topics]]
+name = "raw.therundown"
+key = "provider_event_id"
+producer = "adapter-therundown"
+consumers = ["normalizer", "raw-archive", "replay"]
+partitions = 3
+replicas = 1
+retention_days = 14
+
+[[topics]]
+name = "raw.polymarket.market"
+key = "provider_market_id"
+producer = "adapter-polymarket-market"
+consumers = ["normalizer", "raw-archive", "replay"]
+partitions = 3
+replicas = 1
+retention_days = 14
+
+[[topics]]
+name = "raw.polymarket.user"
+key = "venue_order_id"
+producer = "adapter-polymarket-user"
+consumers = ["archive", "execution-sync"]
+partitions = 3
+replicas = 1
+retention_days = 90
+
+[[topics]]
+name = "norm.quote"
+key = "canonical_market_key"
+producer = "normalizer"
+consumers = ["mapper", "latency", "ch-sink"]
+partitions = 3
+replicas = 1
+retention_days = 14
+
+[[topics]]
+name = "mapping.decision"
+key = "canonical_event_id"
+producer = "canonical-mapper"
+consumers = ["api", "review"]
+partitions = 3
+replicas = 1
+retention_days = 30
+
+[[topics]]
+name = "latency.sample"
+key = "canonical_market_key"
+producer = "latency-engine"
+consumers = ["alert", "api"]
+partitions = 3
+replicas = 1
+retention_days = 30
+
+[[topics]]
+name = "signal.event"
+key = "canonical_market_key"
+producer = "signal-engine"
+consumers = ["api", "ch-sink"]
+partitions = 3
+replicas = 1
+retention_days = 30
+
+[[topics]]
+name = "order.intent"
+key = "intent_id"
+producer = "signal-engine"
+consumers = ["risk"]
+partitions = 3
+replicas = 1
+retention_days = 90
+
+[[topics]]
+name = "risk.decision"
+key = "intent_id"
+producer = "risk-engine"
+consumers = ["paper", "execution", "api"]
+partitions = 3
+replicas = 1
+retention_days = 90
+
+[[topics]]
+name = "execution.request"
+key = "venue_account_id"
+producer = "risk-manual"
+consumers = ["execution-gateway-pm"]
+partitions = 3
+replicas = 1
+retention_days = 90
+
+[[topics]]
+name = "execution.receipt"
+key = "venue_order_id"
+producer = "execution-user-adapter"
+consumers = ["ledger", "audit", "reconcile"]
+partitions = 3
+replicas = 1
+retention_days = 365
+
+[[topics]]
+name = "paper.fill"
+key = "paper_order_id"
+producer = "paper-broker"
+consumers = ["replay", "api", "analytics"]
+partitions = 3
+replicas = 1
+retention_days = 180
+
+[[topics]]
+name = "dlq.raw"
+key = "message_hash"
+producer = "any-service"
+consumers = ["operator", "replay"]
+partitions = 3
+replicas = 1
+retention_days = 30

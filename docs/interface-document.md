@@ -239,7 +239,8 @@ Polymarket user WS 订阅示例：
   "enabled": false,
   "params": {
     "allowed_sports": ["nba", "nfl"],
-    "allowed_market_types": ["moneyline", "spread", "total"],
+    "allowed_market_types": ["moneyline"],
+    "future_facing_market_types": ["spread", "total"],
     "min_mapping_confidence": 0.95,
     "max_source_age_ms": 750,
     "min_lead_ms": 100,
@@ -254,6 +255,8 @@ Polymarket user WS 订阅示例：
   }
 }
 ```
+
+P0 live 范围仅允许 full-game moneyline。`spread` 和 `total` 只保留为 future-facing interface 示例，不属于 P0 live trading 范围，也不能在 Phase 1/2/early ingestion 阶段被当作 live order 或 signal 输入。
 
 ### 3.5 Signals
 
