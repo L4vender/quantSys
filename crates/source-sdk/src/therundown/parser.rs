@@ -331,9 +331,11 @@ fn raw_ref(
     let channel = match source_channel {
         SourceChannel::RestBootstrap => "rest_bootstrap",
         SourceChannel::RestDelta => "rest_delta",
+        SourceChannel::RestDiscovery => "rest_discovery",
         SourceChannel::WsMarket => "ws_market",
         SourceChannel::WsUser => "ws_user",
         SourceChannel::RestGeoblock => "rest_geoblock",
+        SourceChannel::RestTime => "rest_time",
         SourceChannel::RestClob => "rest_clob",
     };
     let event = provider_event_id.unwrap_or("unknown_event");

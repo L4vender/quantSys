@@ -46,7 +46,7 @@ make compose-down
 
 ## 配置说明
 
-`crates/config` 读取 Phase 1 的 `configs/sources/*.example.toml`。Secret 字段只保存环境变量引用，例如 `THERUNDON_API_KEY`、`POLYMARKET_API_KEY`、`POLYMARKET_SECRET`、`POLYMARKET_PASSPHRASE` 和 `POLYMARKET_PRIVATE_KEY`，不会解析或打印真实值。
+`crates/config` 读取 Phase 1 的 `configs/sources/*.example.toml`。Secret 字段只保存环境变量引用，例如 `THERUNDON_API_KEY`、`POLYMARKET_API_KEY`、`POLYMARKET_SECRET` 和 `POLYMARKET_PASSPHRASE`，不会解析或打印真实值。Phase 4 不读取 Polymarket private key；signer 隔离留到后续执行阶段。
 
 当前支持的非 secret override：
 

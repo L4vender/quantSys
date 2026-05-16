@@ -57,9 +57,20 @@ THERUNDOWN_SPORT_LEAGUES = {
 
 COMMON_POLYMARKET_SPORT_TAGS = {"1", "100639"}
 GENERIC_YES_NO = {"yes", "no"}
+GENERIC_RESULT_OUTCOMES = {"yes", "no", "over", "under"}
+CORE_MARKET_TYPES = {"moneyline", "spread", "total"}
+THERUNDOWN_CORE_MARKET_TYPES = {
+    1: "moneyline",
+    2: "spread",
+    3: "total",
+    41: "moneyline",
+    42: "spread",
+    43: "total",
+}
 HARD_ORDER_PATH_RE = re.compile(r"(?i)(/orders?|/cancel|/sign|/auth/api-key|/derive|/create-order)")
 PUNCT_RE = re.compile(r"[^a-z0-9\s]")
 SPACE_RE = re.compile(r"\s+")
+LINE_RE = re.compile(r"(?<!\d)([+-]?\d+(?:\.\d+)?)(?!\d)")
 
 
 class LiveMappingError(Exception):
@@ -102,6 +113,8 @@ class ProviderEvent:
     source_timestamp: str | None
     received_at: str
     raw_ref: str
+    line: float | None = None
+    market_id: str | None = None
     normalization_steps: list[str] = field(default_factory=list)
 
 
@@ -128,6 +141,7 @@ class ProviderMarket:
     away_team_raw: str | None = None
     home_away_status: str = "unknown"
     market_type_raw: str | None = None
+    line: float | None = None
     period: str = "full_game"
     normalization_steps: list[str] = field(default_factory=list)
 
@@ -359,6 +373,89 @@ def normalize_market_type(raw: str | None, outcomes: list[str] | None, context: 
     return "unknown", "unknown", reasons
 
 
+def market_type_from_therundown_market(market: dict[str, Any]) -> tuple[str, str, list[str]]:
+    try:
+        market_id = int(market.get("market_id") or market.get("id") or 0)
+    except (TypeError, ValueError):
+        market_id = 0
+    if market_id in THERUNDOWN_CORE_MARKET_TYPES:
+        return THERUNDOWN_CORE_MARKET_TYPES[market_id], "full_game", [f"market_id:{market_id}"]
+    return normalize_market_type(
+        str(market.get("name") or market.get("market_type") or market.get("market_description") or ""),
+        [
+            str(participant.get("name"))
+            for participant in market.get("participants") or []
+            if participant.get("name")
+        ],
+    )
+
+
+def parse_line_value(value: Any) -> float | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        number = float(text)
+    except ValueError:
+        match = LINE_RE.search(text)
+        if not match:
+            return None
+        number = float(match.group(1))
+    return abs(number)
+
+
+def extract_therundown_line(market: dict[str, Any]) -> float | None:
+    for participant in market.get("participants") or []:
+        for line in participant.get("lines") or []:
+            parsed = parse_line_value(line.get("value"))
+            if parsed is not None:
+                return parsed
+    return None
+
+
+def extract_therundown_lines(market: dict[str, Any], market_type: str) -> list[float | None]:
+    values: list[float] = []
+    seen: set[str] = set()
+    for participant in market.get("participants") or []:
+        for line in participant.get("lines") or []:
+            parsed = parse_line_value(line.get("value"))
+            if parsed is None:
+                continue
+            key = format_line_key(parsed)
+            if key in seen:
+                continue
+            seen.add(key)
+            values.append(parsed)
+    if market_type in {"spread", "total"}:
+        return sorted(values)
+    return [None]
+
+
+def extract_polymarket_line(event: dict[str, Any], market: dict[str, Any], market_type: str) -> float | None:
+    for key in ["line", "lineValue", "line_value", "spread", "total", "handicap"]:
+        parsed = parse_line_value(market.get(key) or event.get(key))
+        if parsed is not None:
+            return parsed
+    if market_type not in {"spread", "total"}:
+        return None
+    for text in [market.get("question"), market.get("title")]:
+        if not text:
+            continue
+        match = LINE_RE.search(str(text))
+        if match:
+            return abs(float(match.group(1)))
+    return None
+
+
+def format_line_key(line: float | None) -> str:
+    if line is None:
+        return "na"
+    text = f"{line:.3f}".rstrip("0").rstrip(".")
+    return text.replace("-", "m").replace(".", "p")
+
+
 def source_timestamp_from_event(event: dict[str, Any]) -> str | None:
     score = event.get("score") or {}
     return score.get("updated_at") or event.get("updatedAt") or event.get("event_date")
@@ -379,46 +476,56 @@ def parse_therundown_events(
         if start_dt and not (now - timedelta(hours=6) <= start_dt <= deadline):
             continue
         markets = event.get("markets") or []
-        moneyline_markets = [
-            market for market in markets
-            if str(market.get("market_id")) == "1" and str(market.get("period_id", "0")) == "0"
-        ]
-        if not moneyline_markets:
-            continue
-        market = moneyline_markets[0]
         teams = event.get("teams") or []
         home_team = next((team for team in teams if team.get("is_home") is True), None)
         away_team = next((team for team in teams if team.get("is_away") is True), None)
         home_name = combine_team_name(home_team or {}) if home_team else None
         away_name = combine_team_name(away_team or {}) if away_team else None
-        participants = [
-            str(participant.get("name")).strip()
-            for participant in market.get("participants") or []
-            if participant.get("name")
-        ]
-        if not participants:
-            participants = [name for name in [away_name, home_name] if name]
+        event_participants = [name for name in [away_name, home_name] if name]
         sport_id = int(event.get("sport_id") or 0)
         sport_name, league = THERUNDOWN_SPORT_LEAGUES.get(sport_id, (sport.lower(), sport.lower()))
         schedule = event.get("schedule") or {}
-        event_name = schedule.get("event_name") or " vs ".join(participants) or event.get("event_id")
-        results.append(ProviderEvent(
-            provider="therundown",
-            provider_event_id=str(event.get("event_id") or event.get("event_uuid") or stable_hash(event)),
-            sport=sport_name,
-            league=league,
-            event_name=str(event_name),
-            start_time_utc=isoformat_utc(start_dt) if start_dt else None,
-            home_team_raw=home_name,
-            away_team_raw=away_name,
-            participants_raw=participants,
-            market_type_raw=str(market.get("name") or "moneyline"),
-            outcome_names_raw=participants,
-            source_timestamp=source_timestamp_from_event(event),
-            received_at=received_at,
-            raw_ref=raw_ref,
-            normalization_steps=["therundown_v2_events", "market_id:1", "period_id:0"],
-        ))
+        event_name = schedule.get("event_name") or " vs ".join(event_participants) or event.get("event_id")
+        event_id = str(event.get("event_id") or event.get("event_uuid") or stable_hash(event))
+        for market in markets:
+            if str(market.get("period_id", "0")) != "0":
+                continue
+            market_type, period, market_steps = market_type_from_therundown_market(market)
+            if market_type not in CORE_MARKET_TYPES or period != "full_game":
+                continue
+            participant_names = [
+                str(participant.get("name")).strip()
+                for participant in market.get("participants") or []
+                if participant.get("name")
+            ]
+            team_participants = [name for name in [away_name, home_name] if name]
+            if not team_participants:
+                team_participants = [
+                    name for name in participant_names
+                    if normalize_basic(name) not in GENERIC_RESULT_OUTCOMES
+                ]
+            if not team_participants:
+                continue
+            for market_line in extract_therundown_lines(market, market_type):
+                results.append(ProviderEvent(
+                    provider="therundown",
+                    provider_event_id=event_id,
+                    sport=sport_name,
+                    league=league,
+                    event_name=str(event_name),
+                    start_time_utc=isoformat_utc(start_dt) if start_dt else None,
+                    home_team_raw=home_name,
+                    away_team_raw=away_name,
+                    participants_raw=team_participants,
+                    market_type_raw=market_type,
+                    outcome_names_raw=participant_names or team_participants,
+                    source_timestamp=source_timestamp_from_event(event),
+                    received_at=received_at,
+                    raw_ref=raw_ref,
+                    line=market_line,
+                    market_id=str(market.get("market_id") or market.get("id") or ""),
+                    normalization_steps=["therundown_v2_events", *market_steps, "period_id:0"],
+                ))
     return results
 
 
@@ -550,10 +657,13 @@ def parse_polymarket_events(
             token_ids = [str(item) for item in parse_jsonish(market.get("clobTokenIds") or market.get("clobTokenIDs"))]
             title = str(event.get("title") or market.get("question") or "")
             question = str(market.get("question") or title)
-            participants = [item for item in outcomes if normalize_basic(item) not in GENERIC_YES_NO]
-            if not participants:
-                participants = extract_vs_participants(title, question, event.get("description"))
             market_type, period, reasons = normalize_market_type(question, outcomes, " ".join([title, str(event.get("description") or "")]))
+            title_participants = extract_vs_participants(title, question, event.get("description"))
+            participants = title_participants
+            if not participants and market_type == "moneyline":
+                participants = [item for item in outcomes if normalize_basic(item) not in GENERIC_RESULT_OUTCOMES]
+            if not participants:
+                participants = [item for item in outcomes if normalize_basic(item) not in GENERIC_RESULT_OUTCOMES]
             start_time = extract_polymarket_start(event, market, outcomes)
             explicit_home = market.get("homeTeam") or market.get("home_team") or event.get("homeTeam") or event.get("home_team")
             explicit_away = market.get("awayTeam") or market.get("away_team") or event.get("awayTeam") or event.get("away_team")
@@ -581,6 +691,7 @@ def parse_polymarket_events(
                 away_team_raw=str(explicit_away) if explicit_away else None,
                 home_away_status=home_away_status,
                 market_type_raw=market_type,
+                line=extract_polymarket_line(event, market, market_type),
                 period=period,
                 normalization_steps=["gamma_events", *reasons],
             ))
@@ -666,7 +777,7 @@ def canonical_name(name: str | None, sport: str, aliases: dict[str, dict[str, st
 
 def is_concrete_polymarket_game(pm: ProviderMarket) -> bool:
     context = normalize_basic(" ".join([pm.event_title, pm.market_title, pm.event_slug or ""]))
-    if pm.market_type_raw != "moneyline":
+    if pm.market_type_raw not in CORE_MARKET_TYPES:
         return False
     if len(pm.participants_raw) < 2:
         return False
@@ -705,6 +816,8 @@ def score_candidate(
     pm_market_type, pm_period, _ = normalize_market_type(pm.market_type_raw, pm.outcome_names_raw, " ".join([pm.event_title, pm.market_title]))
     if tr.sport != pm.sport and not ({tr.sport, pm.sport} <= {"tennis", "atp", "wta"}):
         reject_reasons.append("sport_mismatch")
+    if tr_market_type != pm_market_type or tr_period != pm_period:
+        reject_reasons.append("market_type_mismatch")
     if not pm.active or pm.closed:
         reject_reasons.append("polymarket_not_active_or_closed")
     time_score, delta_seconds = score_time(tr.start_time_utc, pm.start_time_utc)
@@ -714,8 +827,8 @@ def score_candidate(
     elif date_status == "different_date":
         reject_reasons.append("event_date_mismatch")
     participant_score, outcome_set_score, pair_status = pair_participant_scores(
-        tr.outcome_names_raw or tr.participants_raw,
-        pm.outcome_names_raw or pm.participants_raw,
+        tr.participants_raw or tr.outcome_names_raw,
+        pm.participants_raw or pm.outcome_names_raw,
         tr.sport,
         aliases,
     )
@@ -756,16 +869,26 @@ def score_candidate(
     canonical_event_id = f"{tr.sport}:{canonical_name(tr.away_team_raw, tr.sport, aliases)}_at_{canonical_name(tr.home_team_raw, tr.sport, aliases)}:{(tr.start_time_utc or 'unknown')[:10]}"
     output_market_type = pm_market_type if pm_market_type != "unknown" else tr_market_type
     output_period = pm_period if pm_period != "unknown" else tr_period
+    output_line = pm.line if pm.line is not None else tr.line
+    if tr.line is not None and pm.line is not None:
+        line_match_status = "same_line" if abs(tr.line - pm.line) <= 0.001 else "different_line"
+    elif tr.line is None and pm.line is None:
+        line_match_status = "not_applicable"
+    else:
+        line_match_status = "line_missing_one_side"
     mapping_id = f"map_{stable_hash([tr.provider_event_id, pm.provider_event_id, pm.condition_id])}"
     return {
         "mapping_id": mapping_id,
         "run_id": "",
         "run_started_at": "",
         "therundown_event_id": tr.provider_event_id,
+        "therundown_market_id": tr.market_id,
         "polymarket_event_id": pm.provider_event_id,
         "polymarket_condition_id": pm.condition_id,
+        "polymarket_market_id": pm.market_id,
+        "polymarket_asset_ids": pm.token_ids,
         "canonical_event_id": canonical_event_id,
-        "canonical_market_key": f"{canonical_event_id}:{output_period}:{output_market_type}",
+        "canonical_market_key": f"{canonical_event_id}:{output_period}:{output_market_type}:{format_line_key(output_line)}",
         "sport": tr.sport,
         "league": tr.league,
         "therundown_event_name": tr.event_name,
@@ -788,6 +911,10 @@ def score_candidate(
         "event_date_match_status": date_status,
         "market_type": output_market_type,
         "period": output_period,
+        "therundown_line": tr.line,
+        "polymarket_line": pm.line,
+        "line": output_line,
+        "line_match_status": line_match_status,
         "outcome_match_status": pair_status,
         "home_away_status": invariant,
         "name_similarity_score": round(name_score, 4),
@@ -820,6 +947,13 @@ def candidate_allowed(
         return False
     if not is_concrete_polymarket_game(pm):
         return False
+    tr_market_type, tr_period, _ = normalize_market_type(tr.market_type_raw, tr.outcome_names_raw, tr.event_name)
+    pm_market_type, pm_period, _ = normalize_market_type(pm.market_type_raw, pm.outcome_names_raw, " ".join([pm.event_title, pm.market_title]))
+    if tr_market_type != pm_market_type or tr_period != pm_period:
+        return False
+    if tr_market_type in {"spread", "total"}:
+        if tr.line is None or pm.line is None or abs(tr.line - pm.line) > 0.001:
+            return False
     tr_dt = parse_iso_datetime(tr.start_time_utc)
     if tr_dt and not (now - timedelta(hours=6) <= tr_dt <= now + timedelta(hours=lookahead_hours)):
         return False
@@ -832,8 +966,8 @@ def candidate_allowed(
         for b in (pm.participants_raw or pm.outcome_names_raw)
     ]
     pair_score, _, _ = pair_participant_scores(
-        tr.outcome_names_raw or tr.participants_raw,
-        pm.outcome_names_raw or pm.participants_raw,
+        tr.participants_raw or tr.outcome_names_raw,
+        pm.participants_raw or pm.outcome_names_raw,
         tr.sport,
         aliases,
     )
@@ -909,7 +1043,7 @@ def load_therundown_config() -> dict[str, Any]:
     config = read_simple_toml(ROOT / "configs/sources/therundown.example.toml")
     config.setdefault("api_base_url", "https://therundown.io/api/v2")
     config.setdefault("auth_env", "THERUNDOWN_API_KEY")
-    config.setdefault("market_ids", [1])
+    config.setdefault("market_ids", [1, 2, 3])
     config.setdefault("affiliate_ids", [19, 23])
     return config
 
@@ -937,7 +1071,7 @@ def fetch_therundown_current_events(
     if not key:
         raise ConfigMissingError(f"TheRundown API key env var is missing: {env_name}")
     api_base = str(config["api_base_url"]).rstrip("/")
-    market_ids = ",".join(str(item) for item in config.get("market_ids", [1]))
+    market_ids = ",".join(str(item) for item in config.get("market_ids", [1, 2, 3]))
     affiliate_ids = ",".join(str(item) for item in config.get("affiliate_ids", [19, 23]))
     dates = sorted({(now + timedelta(hours=hours)).date().isoformat() for hours in range(0, lookahead_hours + 25, 24)})
     received_at = isoformat_utc(now)
@@ -985,18 +1119,19 @@ def fetch_therundown_current_events(
         "unsupported_sports": unsupported,
         "entitlement": entitlement,
         "event_count": len(events),
-        "key_env": env_name,
+        "key_env": "<env-var-name-redacted>",
     }
     return dedupe_events(events), source_status
 
 
 def dedupe_events(events: list[ProviderEvent]) -> list[ProviderEvent]:
-    seen: set[str] = set()
+    seen: set[tuple[str, str | None, float | None]] = set()
     result: list[ProviderEvent] = []
     for event in events:
-        if event.provider_event_id in seen:
+        key = (event.provider_event_id, event.market_type_raw, event.line)
+        if key in seen:
             continue
-        seen.add(event.provider_event_id)
+        seen.add(key)
         result.append(event)
     return result
 
@@ -1115,6 +1250,137 @@ def write_json(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
 
 
+def condition_ids_for_user_ws(matched: list[dict[str, Any]]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for item in sorted(matched, key=lambda value: (-float(value.get("confidence") or 0), str(value.get("polymarket_condition_id") or ""))):
+        condition_id = str(item.get("polymarket_condition_id") or "").strip()
+        if not condition_id or condition_id in seen:
+            continue
+        seen.add(condition_id)
+        result.append(condition_id)
+    return result
+
+
+def unique_in_order(values: Iterable[Any]) -> list[Any]:
+    seen: set[str] = set()
+    result: list[Any] = []
+    for value in values:
+        if value is None or value == "":
+            continue
+        key = str(value)
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(value)
+    return result
+
+
+def selected_line_value(line: Any) -> float | None:
+    if line is None:
+        return None
+    try:
+        return float(line)
+    except (TypeError, ValueError):
+        return None
+
+
+def line_group_key(line: Any) -> str:
+    parsed = selected_line_value(line)
+    if parsed is None:
+        return "no_line"
+    return format_line_key(parsed)
+
+
+def choose_watchlist_line(items: list[dict[str, Any]]) -> tuple[str, list[dict[str, Any]], str, int]:
+    by_line: dict[str, list[dict[str, Any]]] = {}
+    for item in items:
+        by_line.setdefault(line_group_key(item.get("line")), []).append(item)
+    max_count = max(len(group) for group in by_line.values())
+    tied = {line_key: group for line_key, group in by_line.items() if len(group) == max_count}
+    if len(tied) == 1:
+        line_key, group = next(iter(tied.items()))
+        return line_key, group, "max_market_count", max_count
+
+    numeric_lines = sorted(
+        (selected_line_value(group[0].get("line")), line_key, group)
+        for line_key, group in tied.items()
+        if selected_line_value(group[0].get("line")) is not None
+    )
+    if numeric_lines:
+        _, line_key, group = numeric_lines[len(numeric_lines) // 2]
+        return line_key, group, "median_line_tie_break", max_count
+    line_key = sorted(tied)[0]
+    return line_key, tied[line_key], "median_line_tie_break", max_count
+
+
+def build_ws_watchlist(decisions: dict[str, list[dict[str, Any]]], run_id: str, generated_at: str) -> dict[str, Any]:
+    selected_items: list[dict[str, Any]] = []
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for item in decisions.get("matched", []):
+        market_type = str(item.get("market_type") or "unknown")
+        if market_type not in CORE_MARKET_TYPES:
+            continue
+        if not item.get("therundown_event_id") or not item.get("polymarket_condition_id"):
+            continue
+        key = (str(item.get("canonical_event_id") or ""), market_type)
+        grouped.setdefault(key, []).append(item)
+
+    for (_canonical_event_id, market_type), items in sorted(grouped.items()):
+        _line_key, line_items, selection_reason, count = choose_watchlist_line(items)
+        item = sorted(
+            line_items,
+            key=lambda value: (
+                -float(value.get("confidence") or 0),
+                str(value.get("polymarket_condition_id") or ""),
+            ),
+        )[0]
+        selected_items.append({
+            "canonical_event_id": item.get("canonical_event_id"),
+            "canonical_market_key": item.get("canonical_market_key"),
+            "sport": item.get("sport"),
+            "league": item.get("league"),
+            "event_name": item.get("therundown_event_name") or item.get("polymarket_event_title"),
+            "event_start_time_utc": item.get("start_time_therundown") or item.get("start_time_polymarket"),
+            "market_type": market_type,
+            "period": item.get("period") or "full_game",
+            "line": selected_line_value(item.get("line")),
+            "therundown_event_id": item.get("therundown_event_id"),
+            "therundown_market_id": item.get("therundown_market_id"),
+            "polymarket_event_id": item.get("polymarket_event_id"),
+            "polymarket_condition_id": item.get("polymarket_condition_id"),
+            "polymarket_market_id": item.get("polymarket_market_id"),
+            "polymarket_asset_ids": item.get("polymarket_asset_ids") or [],
+            "selection_reason": selection_reason,
+            "matched_market_count": count,
+            "confidence": item.get("confidence"),
+        })
+
+    return {
+        "schema_version": "quantsys.ws_watchlist.v1",
+        "run_id": run_id,
+        "generated_at": generated_at,
+        "selection_policy": "one_market_per_event_and_type; choose max matched market count per line; tie chooses median available line",
+        "items": selected_items,
+        "therundown": {
+            "event_ids": unique_in_order(item.get("therundown_event_id") for item in selected_items),
+            "market_ids": sorted({
+                int(str(item.get("therundown_market_id")))
+                for item in selected_items
+                if str(item.get("therundown_market_id") or "").isdigit()
+            }),
+        },
+        "polymarket": {
+            "condition_ids": unique_in_order(item.get("polymarket_condition_id") for item in selected_items),
+            "asset_ids": unique_in_order(
+                asset_id
+                for item in selected_items
+                for asset_id in (item.get("polymarket_asset_ids") or [])
+            ),
+        },
+    }
+
+
 def write_outputs(
     output_dir: Path,
     run_id: str,
@@ -1132,6 +1398,12 @@ def write_outputs(
             item["run_id"] = run_id
             item["run_started_at"] = run_started_at
     write_json(output_dir / "latest.json", decisions.get("latest", []))
+    write_json(output_dir / "ws_watchlist.json", build_ws_watchlist(decisions, run_id, run_started_at))
+    write_json(output_dir / "polymarket_user_markets.json", {
+        "condition_ids": condition_ids_for_user_ws(decisions.get("matched", [])),
+        "source": "live_mapping_matched",
+        "notes": "Use these Polymarket condition IDs for read-only user websocket subscription.",
+    })
     write_json(output_dir / "unmatched_therundown.json", decisions.get("unmatched_therundown", []))
     write_json(output_dir / "unmatched_polymarket.json", decisions.get("unmatched_polymarket", []))
     write_json(output_dir / "needs_review.json", decisions.get("needs_review", []))
@@ -1140,6 +1412,7 @@ def write_outputs(
     write_json(output_dir / "source_status.json", source_status)
     csv_fields = [
         "mapping_id", "decision", "confidence", "sport", "league",
+        "market_type", "line", "line_match_status",
         "therundown_event_name", "polymarket_event_title",
         "start_time_therundown", "start_time_polymarket",
         "event_time_delta_seconds", "home_away_status",
@@ -1167,7 +1440,7 @@ def write_outputs(
 def summarize_status(status: dict[str, Any]) -> str:
     safe = dict(status)
     if "key_env" in safe:
-        safe["key_env"] = str(safe["key_env"])
+        safe["key_env"] = "<env-var-name-redacted>"
     return json.dumps(safe, ensure_ascii=False, sort_keys=True)
 
 
@@ -1264,6 +1537,13 @@ def write_failure_report(output_dir: Path, run_started_at: str, message: str, co
     (output_dir / "latest.md").write_text(text)
     for name in ["latest.json", "unmatched_therundown.json", "unmatched_polymarket.json", "needs_review.json", "rejected.json"]:
         write_json(output_dir / name, [])
+    write_json(output_dir / "ws_watchlist.json", {
+        "schema_version": "quantsys.ws_watchlist.v1",
+        "generated_at": run_started_at,
+        "items": [],
+        "therundown": {"event_ids": [], "market_ids": []},
+        "polymarket": {"condition_ids": [], "asset_ids": []},
+    })
     (output_dir / "latest.csv").write_text("mapping_id,decision,confidence\n")
 
 
@@ -1311,7 +1591,7 @@ def run_live_mapping(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
     else:
         source_status["polymarket"] = {"status": "disabled"}
     if args.therundown_enabled and not therundown_events:
-        raise DataEmptyError("TheRundown returned zero current/lookahead moneyline events")
+        raise DataEmptyError("TheRundown returned zero current/lookahead moneyline/spread/total events")
     if args.polymarket_enabled and not polymarket_markets:
         raise DataEmptyError("Polymarket returned zero active sports markets")
     decisions = match_events(

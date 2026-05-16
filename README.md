@@ -119,6 +119,17 @@ make topic-init-dry-run
 
 本地依赖启动与 migration 见 [Phase 2 Foundation And Local Infra](docs/development/phase-02-foundation-and-local-infra.md)。
 
+Phase 3/4 本地 CSV 观察输出可手动开启；它只写 append-only 行情观察文件，不生成策略、风控、order intent 或执行请求：
+
+```bash
+make local-csv-test
+make live-watchlist
+make therundown-csv-run
+make polymarket-csv-run
+```
+
+WS 抓取默认使用 `output/live-mapping/ws_watchlist.json`，所以先运行 `make live-watchlist`，再运行 `make therundown-csv-run` 和 `make polymarket-csv-run`。该流程每场比赛最多选择 moneyline、spread、total 各一个盘口；spread/total 多 line 时先选匹配市场数量最多的 line，数量相同则选中位数 line。
+
 ## 6. 文档索引
 
 | 文档 | 用途 |
@@ -127,6 +138,7 @@ make topic-init-dry-run
 | [外部 API 契约校准 Spike](docs/1_external_api_contract_spike.md) | TheRundown / Polymarket 官方契约、fixture、contract test 和 live 前置门槛 |
 | [Phase 1 契约报告](docs/reports/external-api-contract-spike-2026-05-15.md) | TheRundown / Polymarket 探测结果、未知项、降级策略和 Phase 2 准入结论 |
 | [Adapter 契约基线](docs/adapters/api-contract-baseline.md) | `RawMessage`、`NormalizedQuote`、`SourceState` 字段与 provider 映射规则 |
+| [本地 CSV 观察输出](docs/storage/local-csv-output.md) | Phase 3/4 TheRundown 与 Polymarket 行情的本地 CSV、provider/league 目录和安全边界 |
 | [目标架构文档](docs/2_architecture_target.md) | 目标架构、服务边界、模块边界、数据面/控制面方向 |
 | [功能化开发阶段总索引](docs/3_development_phases.md) | Foundation、数据采集、实盘模拟、真实量化交易的阶段入口 |
 | [风险与验证计划](docs/4_risk_and_validation_plan.md) | 风险清单、测试矩阵、压测、故障演练和 live 准入门槛 |

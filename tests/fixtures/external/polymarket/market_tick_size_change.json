@@ -1,0 +1,15 @@
+{
+  "_fixture_metadata": {
+    "provider": "polymarket",
+    "source_type": "mock",
+    "derived_from": "https://docs.polymarket.com/api-reference/wss/market",
+    "captured_at": "2026-05-15T00:00:00Z",
+    "sanitized": true
+  },
+  "event_type": "tick_size_change",
+  "market": "pm_condition_mock_lal_bos_moneyline",
+  "asset_id": "pm_asset_yes_mock_001",
+  "timestamp": "1778864119000",
+  "old_tick_size": "0.01",
+  "new_tick_size": "0.001"
+}

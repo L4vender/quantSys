@@ -22,6 +22,14 @@ Topic catalog 的源文件是 `scripts/topic-init/topics.toml`，由 `crates/eve
 
 Phase 3 `adapter-therundown` publishes `RawMessage` only. `provider=therundown`; `source_channel` is one of `rest_bootstrap`, `rest_delta`, or `ws_market`; provider ids are copied from TheRundown payload when present; `payload_hash` and `raw_id` are deterministic; `payload` is the raw external JSON and never includes `X-TheRundown-Key`, websocket query `key`, or other auth material. WebSocket `heartbeat` and unknown `meta.type` messages are preserved as raw payloads; missing required fields are sent to the adapter DLQ sink instead of fabricating ids.
 
+## `raw.polymarket.market` Schema
+
+Phase 4 `adapter-polymarket-market` publishes `RawMessage` only. `provider=polymarket`; `source_channel` is one of `rest_discovery`, `ws_market`, `rest_geoblock`, or `rest_time`. Discovery raw wraps the Gamma events response and uses the first discovered condition/token for stable ids. Market WS raw preserves `book`, `price_change`, `best_bid_ask`, `last_trade_price`, `tick_size_change`, `new_market`, `market_resolved`, and unknown `event_type` payloads. `payload_hash` and `raw_id` are deterministic; `provider_event_id` is the condition id when present; `provider_market_id` is the asset/token id when present. Missing required market fields go to the adapter DLQ sink.
+
+## `raw.polymarket.user` Schema
+
+Phase 4 `adapter-polymarket-user` publishes `RawMessage` only. `provider=polymarket`; `source_channel=ws_user`; payloads include raw user `order`, `order_update`, `trade`/`fill`, and unknown user channel events. The adapter treats this as read-only state for future reconciliation. `apiKey`, `secret`, `passphrase`, `signature`, transaction hashes, and private-key-like fields are redacted before entering `RawMessage`, logs, errors, fixtures, or DLQ records. Missing real user credentials sets `SourceState.status=auth_missing` and does not fail market ingestion or CI.
+
 ## Phase 2 约束
 
 - `order.intent`、`risk.decision`、`execution.*`、`paper.fill` 在 Phase 2 只是未来链路的 topic metadata。

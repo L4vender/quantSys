@@ -1,0 +1,15 @@
+{
+  "_fixture_metadata": {
+    "provider": "polymarket",
+    "source_type": "mock",
+    "derived_from": "https://docs.polymarket.com/api-reference/wss/market",
+    "captured_at": "2026-05-15T00:00:00Z",
+    "sanitized": true
+  },
+  "event_type": "market_resolved",
+  "custom_feature_enabled": true,
+  "market": "pm_condition_mock_lal_bos_moneyline",
+  "timestamp": "1778864121000",
+  "winning_asset_id": "pm_asset_yes_mock_001",
+  "resolved": true
+}

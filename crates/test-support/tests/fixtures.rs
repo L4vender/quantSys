@@ -3,7 +3,7 @@ use quantsys_test_support::{canonical_json_hash, load_external_fixture, load_man
 #[test]
 fn loads_phase1_manifest_and_fixture_json() {
     let manifest = load_manifest().unwrap();
-    assert_eq!(manifest.fixtures.len(), 13);
+    assert_eq!(manifest.fixtures.len(), 21);
 
     let fixture = load_external_fixture("therundown/ws_market_price.json").unwrap();
     assert_eq!(fixture["meta"]["type"], "market_price");

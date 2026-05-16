@@ -3,7 +3,31 @@
 version = 4
 
 [[package]]
-name = "adapter-therundown"
+name = "adapter-polymarket-market"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "clap",
+ "futures-util",
+ "quantsys-config",
+ "quantsys-domain",
+ "quantsys-eventbus",
+ "quantsys-source-sdk",
+ "quantsys-storage",
+ "quantsys-telemetry",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-tungstenite",
+ "tower",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "adapter-polymarket-user"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -14,6 +38,30 @@ dependencies = [
  "quantsys-config",
  "quantsys-eventbus",
  "quantsys-source-sdk",
+ "quantsys-telemetry",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tokio-tungstenite",
+ "tower",
+ "tracing",
+]
+
+[[package]]
+name = "adapter-therundown"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "clap",
+ "futures-util",
+ "quantsys-config",
+ "quantsys-domain",
+ "quantsys-eventbus",
+ "quantsys-source-sdk",
+ "quantsys-storage",
  "quantsys-telemetry",
  "serde",
  "serde_json",
@@ -1086,7 +1134,11 @@ name = "quantsys-storage"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "quantsys-domain",
  "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
  "thiserror 2.0.18",
 ]
 

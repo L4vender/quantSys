@@ -4,5 +4,6 @@
 __pycache__/
 *.pyc
 output/
+output/local-csv/
 target/
 .worktrees/

@@ -8,6 +8,8 @@ members = [
     "crates/source-sdk",
     "crates/test-support",
     "services/adapter-therundown",
+    "services/adapter-polymarket-market",
+    "services/adapter-polymarket-user",
     "services/api-gateway",
 ]
 resolver = "2"
@@ -33,7 +35,7 @@ serde_yaml = "0.9"
 sha2 = "0.10"
 tempfile = "3.15"
 thiserror = "2.0"
-tokio = { version = "1.43", features = ["macros", "net", "rt-multi-thread", "signal", "time"] }
+tokio = { version = "1.43", features = ["io-util", "macros", "net", "rt-multi-thread", "signal", "time"] }
 tokio-tungstenite = { version = "0.28", features = ["rustls-tls-webpki-roots"] }
 toml = "0.8"
 tower = { version = "0.5", features = ["util"] }

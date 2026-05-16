@@ -1,0 +1,18 @@
+{
+  "_fixture_metadata": {
+    "provider": "polymarket",
+    "source_type": "mock",
+    "derived_from": "https://docs.polymarket.com/api-reference/wss/market",
+    "captured_at": "2026-05-15T00:00:00Z",
+    "sanitized": true
+  },
+  "event_type": "new_market",
+  "custom_feature_enabled": true,
+  "market": "pm_condition_mock_new_sports",
+  "asset_ids": [
+    "pm_asset_new_yes",
+    "pm_asset_new_no"
+  ],
+  "timestamp": "1778864120000",
+  "question": "Mock sports market created?"
+}

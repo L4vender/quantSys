@@ -4,7 +4,7 @@ ws_url = "wss://therundown.io/api/v2/ws/markets"
 auth_env = "THERUNDON_API_KEY"
 
 sport_ids = [4]
-market_ids = [1]
+market_ids = [1, 2, 3]
 affiliate_ids = [19, 23]
 event_ids = []
 
@@ -32,3 +32,12 @@ rate_limited_disables_live_signal = true
 monthly_limit = 40000000
 min_remaining_for_live_signal = 100000
 exhausted_disables_live_signal = true
+
+[local_csv]
+enabled = false
+base_dir = "output/local-csv"
+flush_every_rows = 1
+rotate_daily = false
+include_raw_refs = true
+write_single_provider_files = true
+write_comparison_files = false

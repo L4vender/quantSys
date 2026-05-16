@@ -1,0 +1,29 @@
+{
+  "_fixture_metadata": {
+    "provider": "polymarket",
+    "source_type": "mock",
+    "derived_from": "https://docs.polymarket.com/api-reference/wss/user",
+    "captured_at": "2026-05-15T00:00:00Z",
+    "sanitized": true
+  },
+  "event_type": "trade",
+  "type": "TRADE",
+  "id": "pm_fill_mock_001",
+  "market": "pm_condition_mock_lal_bos_moneyline",
+  "asset_id": "pm_asset_yes_mock_001",
+  "side": "BUY",
+  "size": "45.00",
+  "price": "0.49",
+  "status": "MATCHED",
+  "timestamp": "1778864122",
+  "transaction_hash": "<redacted-transaction-hash>",
+  "maker_orders": [
+    {
+      "order_id": "pm_order_mock_001",
+      "asset_id": "pm_asset_yes_mock_001",
+      "matched_amount": "45.00",
+      "price": "0.49",
+      "side": "SELL"
+    }
+  ]
+}

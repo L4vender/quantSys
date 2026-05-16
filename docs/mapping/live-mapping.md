@@ -16,17 +16,18 @@ Run realtime discovery and mapping:
 make live-mapping
 ```
 
-`make live-mapping` calls TheRundown V2 current events and Polymarket public Gamma sports events. It does not use fixtures as primary input, does not call Polymarket CLOB order endpoints, does not read private keys, and does not create order intents.
+`make live-mapping` calls TheRundown V2 current events and Polymarket public Gamma sports events. It also writes `output/live-mapping/ws_watchlist.json`, which can be used to start both websocket adapters with the same matched event/market set. It does not use fixtures as primary input, does not call Polymarket CLOB order endpoints, does not read private keys, and does not create order intents.
 
 ## Data Flow
 
-1. TheRundown V2 `/sports/{sportID}/events/{date}` is called with `market_ids=1`, `main_line=true`, configured affiliate filters, and `X-TheRundown-Key`.
+1. TheRundown V2 `/sports/{sportID}/events/{date}` is called with configured core `market_ids` for full-game moneyline, spread, and total, `main_line=true`, configured affiliate filters, and `X-TheRundown-Key`.
 2. Polymarket Gamma `/sports` is called to discover sport tag IDs, then `/events?active=true&closed=false&tag_id=...` is paginated for selected sports.
 3. Provider events are normalized for sport, league, participants, market type, period, and start time.
-4. Polymarket candidates must be concrete league game markets, such as `Team A vs. Team B`. Series winners, futures, season totals, props, awards, and championship markets are excluded before scoring.
-5. Candidates are generated when sport aligns, the TheRundown event is inside the lookahead window, the Polymarket concrete game has the same event date when known, and the two team/player names are similar.
-6. Candidates are scored by event date and team/player names, with market type and home/away retained as audit fields, then classified as `matched`, `needs_review`, or `rejected`.
-6. Reports are written under `output/live-mapping/`.
+4. Polymarket candidates must be concrete league game markets, such as `Team A vs. Team B`, and must be moneyline, spread, or total. Series winners, futures, season totals, props, awards, and championship markets are excluded before scoring.
+5. Candidates are generated when sport aligns, market type aligns, the TheRundown event is inside the lookahead window, the Polymarket concrete game has the same event date when known, and the two team/player names are similar.
+6. Candidates are scored by event date and team/player names. Home/away status is retained as audit metadata only; reversed or unknown home/away does not block a match. Spread and total candidates must have the same line on both providers; moneyline has no line.
+7. The websocket watchlist keeps at most one moneyline, one spread, and one total per matched event. For spread/total, if multiple lines are available, the line with the most matched markets is selected; if counts tie, the median available line is selected.
+8. Reports are written under `output/live-mapping/`.
 
 ## Confidence Formula
 
@@ -38,7 +39,7 @@ Default decision thresholds:
 - `0.80 <= confidence < 0.95`: `needs_review`
 - `confidence < 0.80`: `rejected`
 
-Candidate exclusion includes Polymarket series winners, futures, season totals, props, awards, championship markets, inactive markets, and closed markets. Hard rejects include sport mismatch, different event dates when both dates are known, and team/player name mismatch. Exact start-time delta and home/away status do not block event-level matching.
+Candidate exclusion includes Polymarket series winners, futures, props, awards, championship markets, inactive markets, and closed markets. Hard rejects include sport mismatch, market type mismatch, different event dates when both dates are known, team/player name mismatch, and spread/total line mismatch. Exact start-time delta and home/away status do not block event-level matching.
 
 ## Home/Away Handling
 
@@ -57,6 +58,8 @@ The realtime run writes:
 - `latest.json`
 - `latest.csv`
 - `latest.md`
+- `ws_watchlist.json`
+- `polymarket_user_markets.json`
 - `unmatched_therundown.json`
 - `unmatched_polymarket.json`
 - `needs_review.json`
@@ -64,7 +67,33 @@ The realtime run writes:
 - `alias_candidates.json`
 - `source_status.json`
 
-`latest.md` is the operator-readable audit report. `latest.json` is the downstream baseline for later normalizer/canonical-mapper persistence.
+`latest.md` is the operator-readable audit report. `latest.json` is the downstream baseline for later normalizer/canonical-mapper persistence. `ws_watchlist.json` contains the selected TheRundown event/market IDs and Polymarket `assets_ids` for websocket capture. `polymarket_user_markets.json` contains matched Polymarket condition IDs that `adapter-polymarket-user` can use for read-only user websocket subscription when `user_channel.markets` is empty.
+
+## Watchlist Websocket Capture
+
+Generate the watchlist first:
+
+```bash
+make live-watchlist
+```
+
+Then start the two market adapters with that watchlist:
+
+```bash
+make therundown-watchlist-csv-run
+make polymarket-watchlist-csv-run
+```
+
+Equivalent explicit commands:
+
+```bash
+cargo run -p adapter-therundown -- --config configs/sources/therundown.example.toml --mode ws --csv-output output/local-csv
+cargo run -p adapter-polymarket-market -- --config configs/sources/polymarket.example.toml --mode market-ws --csv-output output/local-csv
+```
+
+TheRundown and Polymarket market WS modes use `output/live-mapping/ws_watchlist.json` by default. TheRundown uses the watchlist to set `event_ids` and `market_ids` in the websocket URL, preserving configured sportsbook affiliate filters. Polymarket uses the watchlist to build the market websocket `assets_ids` subscription. TheRundown still receives provider-level websocket messages, so the adapter drops market-price payloads outside the selected event/market/line before raw publish and local CSV write.
+
+If an operator intentionally wants the old broad subscription behavior for debugging, both adapters support `--disable-watchlist`. Normal CSV capture should not use that flag.
 
 ## Phase Integration
 

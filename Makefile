@@ -1,4 +1,4 @@
-.PHONY: contract-test test-contract therundown-test therundown-contract-test therundown-integration-test therundown-mock therundown-live-probe adapter-therundown mapping-test live-mapping fmt clippy test check compose-up compose-down migrate-local topic-init topic-init-dry-run
+.PHONY: contract-test test-contract therundown-test therundown-contract-test therundown-integration-test therundown-mock therundown-live-probe therundown-csv-run therundown-watchlist-csv-run adapter-therundown polymarket-test polymarket-contract-test polymarket-integration-test polymarket-mock polymarket-csv-run polymarket-watchlist-csv-run adapter-polymarket-market adapter-polymarket-user polymarket-public-probe polymarket-geoblock-probe local-csv-test mapping-test live-mapping live-watchlist fmt clippy test check compose-up compose-down migrate-local topic-init topic-init-dry-run
 
 contract-test:
 	python3 scripts/contract/check_external_api_contract.py
@@ -14,7 +14,7 @@ clippy:
 test:
 	cargo test --workspace
 
-check: fmt clippy test contract-test therundown-test
+check: fmt clippy test contract-test therundown-test polymarket-test local-csv-test
 
 therundown-test:
 	cargo test -p quantsys-source-sdk --test therundown_unit
@@ -40,6 +40,47 @@ therundown-live-probe:
 	fi; \
 	cargo run -p adapter-therundown -- --config configs/sources/therundown.example.toml --mode probe
 
+therundown-csv-run:
+	cargo run -p adapter-therundown -- --config configs/sources/therundown.example.toml --mode ws --csv-output output/local-csv
+
+therundown-watchlist-csv-run:
+	cargo run -p adapter-therundown -- --config configs/sources/therundown.example.toml --mode ws --csv-output output/local-csv
+
+polymarket-test:
+	cargo test -p quantsys-source-sdk --test polymarket_unit
+	cargo test -p quantsys-source-sdk --test polymarket_integration
+	cargo test -p adapter-polymarket-market
+	cargo test -p adapter-polymarket-user
+
+polymarket-contract-test: contract-test polymarket-test
+
+polymarket-integration-test:
+	cargo test -p quantsys-source-sdk --test polymarket_integration
+
+polymarket-mock:
+	cargo test -p quantsys-source-sdk --test polymarket_integration market_ws_events_publish_raw_and_market_resolved_updates_source_state -- --nocapture
+
+local-csv-test:
+	cargo test -p quantsys-storage --test local_csv
+
+polymarket-csv-run:
+	cargo run -p adapter-polymarket-market -- --config configs/sources/polymarket.example.toml --mode market-ws --csv-output output/local-csv
+
+polymarket-watchlist-csv-run:
+	cargo run -p adapter-polymarket-market -- --config configs/sources/polymarket.example.toml --mode market-ws --csv-output output/local-csv
+
+adapter-polymarket-market:
+	cargo build -p adapter-polymarket-market
+
+adapter-polymarket-user:
+	cargo build -p adapter-polymarket-user
+
+polymarket-public-probe:
+	cargo run -p adapter-polymarket-market -- --config configs/sources/polymarket.example.toml --mode discovery
+
+polymarket-geoblock-probe:
+	cargo run -p adapter-polymarket-market -- --config configs/sources/polymarket.example.toml --mode geoblock
+
 compose-up:
 	docker compose -f deploy/docker-compose/docker-compose.yml --profile local up -d
 
@@ -60,3 +101,5 @@ mapping-test:
 
 live-mapping:
 	python3 scripts/mapping/live_match.py --sports nba,nfl,mlb,nhl,tennis --lookahead-hours 24 --dry-run true
+
+live-watchlist: live-mapping

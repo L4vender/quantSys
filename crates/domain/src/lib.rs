@@ -4,6 +4,9 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
+mod ws_watchlist;
+pub use ws_watchlist::{WatchlistPolymarket, WatchlistTheRundown, WsWatchlist, WsWatchlistItem};
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Provider {
@@ -16,9 +19,11 @@ pub enum Provider {
 pub enum SourceChannel {
     RestBootstrap,
     RestDelta,
+    RestDiscovery,
     WsMarket,
     WsUser,
     RestGeoblock,
+    RestTime,
     RestClob,
 }
 
@@ -45,6 +50,9 @@ pub enum Period {
 pub enum SourceMode {
     RestBootstrap,
     RestDelta,
+    RestDiscovery,
+    RestGeoblock,
+    RestTime,
     LiveWs,
     Mock,
     PaperOnly,
@@ -55,8 +63,10 @@ pub enum SourceMode {
 pub enum SourceStatus {
     Ok,
     Degraded,
+    Disabled,
     Stale,
     RateLimited,
+    AuthMissing,
     AuthFailed,
     DataDelayDetected,
     NoWebsocketAccess,
@@ -64,6 +74,7 @@ pub enum SourceStatus {
     CursorStale,
     SchemaError,
     Blocked,
+    MarketResolved,
     Unknown,
 }
 
@@ -227,9 +238,11 @@ fn channel_slug(channel: &SourceChannel) -> &'static str {
     match channel {
         SourceChannel::RestBootstrap => "rest_bootstrap",
         SourceChannel::RestDelta => "rest_delta",
+        SourceChannel::RestDiscovery => "rest_discovery",
         SourceChannel::WsMarket => "ws_market",
         SourceChannel::WsUser => "ws_user",
         SourceChannel::RestGeoblock => "rest_geoblock",
+        SourceChannel::RestTime => "rest_time",
         SourceChannel::RestClob => "rest_clob",
     }
 }

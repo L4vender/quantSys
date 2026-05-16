@@ -21,12 +21,20 @@ THERUNDOWN_FIXTURES = [
 ]
 
 POLYMARKET_FIXTURES = [
+    "market_discovery_events.json",
     "market_subscribe.json",
     "market_book.json",
     "market_price_change.json",
     "market_best_bid_ask.json",
+    "market_last_trade_price.json",
+    "market_tick_size_change.json",
+    "market_new_market.json",
+    "market_resolved.json",
     "user_order_update.json",
+    "user_fill_update.json",
     "geoblock_blocked.json",
+    "geoblock_allowed.json",
+    "time_probe.json",
     "create_order_response.json",
 ]
 

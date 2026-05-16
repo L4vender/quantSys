@@ -1,0 +1,10 @@
+{
+  "_fixture_metadata": {
+    "provider": "polymarket",
+    "source_type": "mock",
+    "derived_from": "https://docs.polymarket.com/api-reference/data/get-server-time",
+    "captured_at": "2026-05-15T00:00:00Z",
+    "sanitized": true
+  },
+  "server_time": 1778864123
+}

@@ -28,6 +28,18 @@ fn loads_phase1_example_toml_with_secret_references() {
         SecretRef::Env("POLYMARKET_API_KEY".to_string())
     );
     assert!(!configs.polymarket.execution_enabled);
+    assert_eq!(
+        configs.polymarket.discovery_filters.game_tag_id,
+        Some(100_639)
+    );
+    assert_eq!(
+        configs.polymarket.discovery_filters.allowed_market_types,
+        vec![
+            "moneyline".to_string(),
+            "spread".to_string(),
+            "total".to_string()
+        ]
+    );
 }
 
 #[test]

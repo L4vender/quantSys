@@ -3,7 +3,8 @@ use quantsys_config::TheRundownConfig;
 use quantsys_source_sdk::therundown::{
     ApiKey, SubscriptionFilters, TheRundownAdapterConfig, TheRundownBackoff,
 };
-use std::path::Path;
+use quantsys_storage::LocalCsvSink;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 pub fn load_config(path: impl AsRef<Path>) -> anyhow::Result<TheRundownConfig> {
@@ -46,4 +47,21 @@ pub fn subscription_filters(config: &TheRundownConfig) -> anyhow::Result<Subscri
         .validate(config.subscription_filters_required)
         .map_err(anyhow::Error::from)?;
     Ok(filters)
+}
+
+pub fn local_csv_sink(
+    config: &TheRundownConfig,
+    override_dir: Option<PathBuf>,
+) -> anyhow::Result<Option<LocalCsvSink>> {
+    let Some(base_dir) = override_dir.or_else(|| {
+        config
+            .local_csv
+            .enabled
+            .then(|| PathBuf::from(&config.local_csv.base_dir))
+    }) else {
+        return Ok(None);
+    };
+    LocalCsvSink::new(&base_dir)
+        .map(Some)
+        .with_context(|| format!("initializing local CSV sink at {}", base_dir.display()))
 }

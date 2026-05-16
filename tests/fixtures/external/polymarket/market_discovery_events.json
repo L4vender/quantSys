@@ -1,0 +1,75 @@
+[
+  {
+    "id": "pm_event_mock_lal_bos",
+    "title": "Los Angeles Lakers vs Boston Celtics",
+    "slug": "nba-lakers-celtics-2026-05-15",
+    "active": true,
+    "closed": false,
+    "category": "Sports",
+    "tags": [
+      { "label": "NBA", "slug": "nba" },
+      { "label": "Sports", "slug": "sports" }
+    ],
+    "startDate": "2026-05-15T23:00:00Z",
+    "markets": [
+      {
+        "id": "pm_market_mock_lal_bos_moneyline",
+        "question": "Lakers vs Celtics: Lakers to win?",
+        "slug": "nba-lakers-celtics-moneyline",
+        "conditionId": "pm_condition_mock_lal_bos_moneyline",
+        "active": true,
+        "closed": false,
+        "enableOrderBook": true,
+        "marketType": "moneyline",
+        "outcomes": "[\"Lakers\", \"Celtics\"]",
+        "clobTokenIds": "[\"pm_asset_yes_mock_001\", \"pm_asset_no_mock_001\"]",
+        "endDateIso": "2026-05-16T02:00:00Z"
+      },
+      {
+        "id": "pm_market_mock_lal_bos_closed",
+        "question": "Closed example",
+        "slug": "nba-lakers-celtics-closed",
+        "conditionId": "pm_condition_mock_closed",
+        "active": false,
+        "closed": true,
+        "outcomes": "[\"Yes\", \"No\"]",
+        "clobTokenIds": "[\"pm_asset_closed_yes\", \"pm_asset_closed_no\"]"
+      },
+      {
+        "id": "pm_market_mock_lal_bos_futures",
+        "question": "Lakers vs Celtics first scorer?",
+        "slug": "nba-lakers-celtics-first-scorer",
+        "conditionId": "pm_condition_mock_lal_bos_first_scorer",
+        "active": true,
+        "closed": false,
+        "enableOrderBook": true,
+        "marketType": "player_prop",
+        "outcomes": "[\"Yes\", \"No\"]",
+        "clobTokenIds": "[\"pm_asset_prop_yes\", \"pm_asset_prop_no\"]"
+      }
+    ]
+  },
+  {
+    "id": "pm_event_mock_politics",
+    "title": "Will a mock bill pass?",
+    "slug": "mock-politics-bill",
+    "active": true,
+    "closed": false,
+    "category": "Politics",
+    "tags": [
+      { "label": "Politics", "slug": "politics" }
+    ],
+    "markets": [
+      {
+        "id": "pm_market_mock_politics",
+        "question": "Will the mock bill pass?",
+        "slug": "mock-politics-bill-pass",
+        "conditionId": "pm_condition_mock_politics",
+        "active": true,
+        "closed": false,
+        "outcomes": "[\"Yes\", \"No\"]",
+        "clobTokenIds": "[\"pm_asset_politics_yes\", \"pm_asset_politics_no\"]"
+      }
+    ]
+  }
+]

@@ -3,6 +3,7 @@ use chrono::{DateTime, Duration, Utc};
 use quantsys_domain::SourceState;
 use thiserror::Error;
 
+pub mod polymarket;
 pub mod therundown;
 
 #[derive(Debug, Error)]

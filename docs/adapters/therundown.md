@@ -159,6 +159,18 @@ The DLQ record includes `error_code`, `error_message`, `provider`, `source_chann
 
 The parser marks `price=0.0001` as `quality_flags.off_board` on the parsed raw wrapper. Phase 3 does not convert odds or calculate probability, so the sentinel never enters normalized probability, no-vig, edge, signal, risk, or execution paths.
 
+## Local CSV Output
+
+The adapter can append raw market observations to the shared local CSV sink after `raw.therundown` publish succeeds:
+
+```bash
+cargo run -p adapter-therundown -- --config configs/sources/therundown.example.toml --mode ws --csv-output output/local-csv
+```
+
+The config section `[local_csv]` defaults to `enabled=false`; `--csv-output` is a manual local override. CSV files are written under `output/local-csv/therundown/{league}/{bookmaker_slug}/` with filenames like `2026-05-16T233000Z_lakers_vs_warriors_moneyline.csv`. In WS mode, the adapter first writes the REST bootstrap market snapshot, then enriches later WS market-price updates from the bootstrap event cache before appending. Each TheRundown sportsbook has its own folder and snapshot, so company prices are not mixed. Affiliate ids are mapped to sportsbook names such as `DraftKings`, `FanDuel`, `BetMGM`, `Pinnacle`, and `Bovada`; the numeric id is still preserved in the `affiliate_id` column. Each row contains source generated time, local fetched time, bookmaker name, affiliate id, team A in Polymarket-style probability format, and team B in Polymarket-style probability format. The output is append-only and for human observation only; it does not create normalized quotes, mapping decisions, strategy signals, edge, risk decisions, or order intents.
+
+See [Local CSV Output](../storage/local-csv-output.md) for fields, file naming, and cleanup.
+
 ## Secret Scrub
 
 Secrets are read only from the configured env var. `ApiKey` Debug and Display print `<redacted>`. URL/query and header scrubbers remove `key=...`, `X-TheRundown-Key`, and known secret values. Raw payloads never include auth headers or websocket query strings.

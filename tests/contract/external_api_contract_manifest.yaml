@@ -78,6 +78,17 @@ fixtures:
     schema_version: polymarket.ws.market_subscribe.mock.v1
     blocking_level: adapter
     notes: "Doc-derived mock. Uses assets_ids, not asset_ids."
+  - fixture_path: tests/fixtures/external/polymarket/market_discovery_events.json
+    provider: polymarket
+    channel: rest
+    message_type: market_discovery_events
+    source_type: mock
+    source_url: https://docs.polymarket.com/market-data/fetching-markets
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: polymarket.rest.discovery_events.mock.v1
+    blocking_level: adapter
+    notes: "Mock Gamma events payload with active sports market, closed market, and non-sports market for discovery filtering."
   - fixture_path: tests/fixtures/external/polymarket/market_book.json
     provider: polymarket
     channel: websocket_market
@@ -111,6 +122,50 @@ fixtures:
     schema_version: polymarket.ws.best_bid_ask.mock.v1
     blocking_level: adapter
     notes: "Extended market event available when custom_feature_enabled=true."
+  - fixture_path: tests/fixtures/external/polymarket/market_last_trade_price.json
+    provider: polymarket
+    channel: websocket_market
+    message_type: last_trade_price
+    source_type: mock
+    source_url: https://docs.polymarket.com/api-reference/wss/market
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: polymarket.ws.last_trade_price.mock.v1
+    blocking_level: adapter
+    notes: "Doc-derived mock for last trade price parser coverage."
+  - fixture_path: tests/fixtures/external/polymarket/market_tick_size_change.json
+    provider: polymarket
+    channel: websocket_market
+    message_type: tick_size_change
+    source_type: mock
+    source_url: https://docs.polymarket.com/api-reference/wss/market
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: polymarket.ws.tick_size_change.mock.v1
+    blocking_level: adapter
+    notes: "Doc-derived mock for tick size change parser coverage."
+  - fixture_path: tests/fixtures/external/polymarket/market_new_market.json
+    provider: polymarket
+    channel: websocket_market
+    message_type: new_market
+    source_type: mock
+    source_url: https://docs.polymarket.com/api-reference/wss/market
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: polymarket.ws.new_market.mock.v1
+    blocking_level: adapter
+    notes: "Extended market lifecycle event available when custom_feature_enabled=true."
+  - fixture_path: tests/fixtures/external/polymarket/market_resolved.json
+    provider: polymarket
+    channel: websocket_market
+    message_type: market_resolved
+    source_type: mock
+    source_url: https://docs.polymarket.com/api-reference/wss/market
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: polymarket.ws.market_resolved.mock.v1
+    blocking_level: source_health
+    notes: "Extended lifecycle event that updates Polymarket SourceState to market_resolved."
   - fixture_path: tests/fixtures/external/polymarket/user_order_update.json
     provider: polymarket
     channel: websocket_user
@@ -126,6 +181,18 @@ fixtures:
     schema_version: polymarket.ws.user_order_update.mock.v1
     blocking_level: live_execution
     notes: "Mock user channel order update. Placeholder auth fields are scrubbed and must never contain live credentials."
+  - fixture_path: tests/fixtures/external/polymarket/user_fill_update.json
+    provider: polymarket
+    channel: websocket_user
+    message_type: fill_update
+    source_type: mock
+    source_url: https://docs.polymarket.com/api-reference/wss/user
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields:
+      - transaction_hash
+    schema_version: polymarket.ws.user_fill_update.mock.v1
+    blocking_level: live_execution
+    notes: "Mock user channel trade/fill update. Phase 4 preserves raw only and performs no reconciliation."
   - fixture_path: tests/fixtures/external/polymarket/geoblock_blocked.json
     provider: polymarket
     channel: rest
@@ -138,6 +205,29 @@ fixtures:
     schema_version: polymarket.rest.geoblock.mock.v1
     blocking_level: live_execution
     notes: "blocked=true is a live execution fail-closed gate."
+  - fixture_path: tests/fixtures/external/polymarket/geoblock_allowed.json
+    provider: polymarket
+    channel: rest
+    message_type: geoblock
+    source_type: mock
+    source_url: https://docs.polymarket.com/api-reference/geoblock
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields:
+      - ip
+    schema_version: polymarket.rest.geoblock_allowed.mock.v1
+    blocking_level: live_execution
+    notes: "blocked=false geoblock fixture; still not a durable live execution approval."
+  - fixture_path: tests/fixtures/external/polymarket/time_probe.json
+    provider: polymarket
+    channel: rest
+    message_type: time_probe
+    source_type: mock
+    source_url: https://docs.polymarket.com/api-reference/data/get-server-time
+    captured_at: 2026-05-15T00:00:00Z
+    sanitized_fields: []
+    schema_version: polymarket.rest.time_probe.mock.v1
+    blocking_level: source_health
+    notes: "Mock server time response used to estimate local clock offset."
   - fixture_path: tests/fixtures/external/polymarket/create_order_response.json
     provider: polymarket
     channel: rest_clob

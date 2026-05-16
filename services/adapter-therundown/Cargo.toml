@@ -12,8 +12,10 @@ chrono.workspace = true
 clap.workspace = true
 futures-util.workspace = true
 quantsys-config = { path = "../../crates/config" }
+quantsys-domain = { path = "../../crates/domain" }
 quantsys-eventbus = { path = "../../crates/eventbus" }
 quantsys-source-sdk = { path = "../../crates/source-sdk" }
+quantsys-storage = { path = "../../crates/storage" }
 quantsys-telemetry = { path = "../../crates/telemetry" }
 serde.workspace = true
 serde_json.workspace = true
