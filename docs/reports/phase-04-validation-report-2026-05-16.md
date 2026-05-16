@@ -1,370 +1,338 @@
 # Phase 4 Polymarket Ingestion Validation Report
 
-## Verification Time
+## Verification Metadata
 
-- Time: 2026-05-16 03:08:44 CST
-- Commit: `6f220a01d21e39d46d99558d6237b2180d006084`
-- Worktree: dirty; Phase 4 implementation files are present but not committed in this workspace.
-- Verdict: **PARTIAL**
-- Phase 5 entry: **not approved yet**
+- Verification date: `2026-05-16`
+- Local time zone: `Asia/Shanghai`
+- Current commit: `24a187a3f93537022cf9bf82acc32247c37ffcbf`
+- Worktree status: dirty; Phase 3/4 CSV, watchlist, and Polymarket adapter files are still local workspace changes.
+- Overall verdict: **PARTIAL**
+- Phase 5 entry: **not fully approved as a hard gate**
+- Operational capture status: **usable for matched TheRundown/Polymarket raw observation with mock-tested flows**
 
-The required build and test commands pass, and the main mock/fixture ingestion path proves that Polymarket market/user raw payloads can be wrapped and published to `raw.polymarket.*`. Validation still found Phase 4 hard-gate gaps around malformed geoblock/time probe state handling and weaker-than-specified smoke coverage.
+This report replaces the earlier Phase 4 validation note. It reflects the current implementation after adding local CSV observation, TheRundown to Polymarket watchlist generation, and default watchlist-based websocket capture.
 
-## Validation Scope
+The important distinction is:
 
-Reviewed:
+- Phase 4 raw ingestion paths for Polymarket market/user data are implemented and tested with fixtures/mocks.
+- Current operator workflow can generate `output/live-mapping/ws_watchlist.json`, then run TheRundown and Polymarket WS capture against only matched markets.
+- Phase 4 still does not implement strategy, risk, paper broker, signer, order generation, execution gateway, canonical Phase 6 mapping persistence, or live execution.
+- The remaining hard-gate weaknesses are malformed probe state handling, finite public WS smoke coverage, and performance measurement depth.
 
-- `README.md`
-- `docs/3_development_phases.md`
-- `docs/development-phases/phase-04-polymarket-ingestion.md`
-- `docs/1_external_api_contract_spike.md`
-- `docs/reports/external-api-contract-spike-2026-05-15.md`
-- `docs/adapters/api-contract-baseline.md`
-- `docs/adapters/polymarket.md`
-- `docs/adapters/therundown.md`
-- `docs/interface-document.md`
-- `docs/2_architecture_target.md`
-- `docs/schema/topic-catalog.md`
-- `configs/sources/polymarket.example.toml`
-- `services/adapter-polymarket-market/`
-- `services/adapter-polymarket-user/`
-- `crates/source-sdk/`
-- `crates/domain/`
-- `crates/eventbus/`
-- `crates/config/`
-- `crates/telemetry/`
-- `crates/test-support/`
-- `tests/fixtures/external/polymarket/`
-- `tests/contract/`
-- `Makefile`
-- `.github/workflows/ci.yml`
+## Current Scope
+
+Validated areas:
+
+- Polymarket public market discovery.
+- Condition/token cache.
+- Market WS subscription using `assets_ids`.
+- Market WS raw event parsing and publish to `raw.polymarket.market`.
+- User WS read-only parser and publish to `raw.polymarket.user`.
+- User auth missing behavior.
+- Geoblock and server time probe happy paths.
+- Local CSV observation path.
+- TheRundown to Polymarket watchlist generation for matched event/market capture.
+- Default watchlist-based WS startup for market adapters.
+- Secret redaction and no-order-call boundary.
+
+Out of scope and still not implemented:
+
+- Real order placement.
+- Polymarket order endpoint calls.
+- Signer or signed orders.
+- Private key loading.
+- Execution gateway.
+- Strategy, edge, lead-lag, no-vig, risk, or paper broker.
+- Frontend trading UI.
+- Formal Phase 6 canonical mapping storage.
 
 ## Static Audit
 
 | Item | Result | Notes |
 | --- | --- | --- |
-| `services/adapter-polymarket-market/` | passed | Market adapter crate exists. |
-| `services/adapter-polymarket-user/` | passed | User adapter crate exists. |
-| `crates/source-sdk/src/polymarket/` | passed | Module directory exists with discovery, parser, subscription, token cache, state, probes, publisher, errors. |
-| `crates/source-sdk/src/polymarket.rs` | n/a | Directory module is used instead. |
-| `docs/adapters/polymarket.md` | passed | Present and mostly complete. |
-| `configs/sources/polymarket.example.toml` | passed | Contains defaults, env names, budgets, `execution_enabled=false`, `geoblock_required=true`. |
-| Required Polymarket fixtures | passed | Required fixtures exist, including `market_subscribe.json`, `market_book.json`, `market_price_change.json`, `market_best_bid_ask.json`, `user_order_update.json`, `geoblock_blocked.json`, and `create_order_response.json`. |
-| Polymarket tests | passed | Present as `crates/source-sdk/tests/polymarket_unit.rs` and `crates/source-sdk/tests/polymarket_integration.rs`. |
-| Top-level `tests/integration/` | weak | No top-level directory; equivalent Rust integration tests live under `crates/source-sdk/tests/`. |
-| Makefile targets | passed | All requested targets exist. |
-| CI workflow | passed | Runs fmt, clippy, workspace tests, contract test, TheRundown test, Polymarket test. |
+| `services/adapter-polymarket-market/` | passed | Market adapter exists with `discovery`, `market-ws`, `geoblock`, `time-probe`, and `health` modes. |
+| `services/adapter-polymarket-user/` | passed | User adapter exists with `user-ws`, `auth-check`, and `health` modes. |
+| `crates/source-sdk/src/polymarket/` | passed | Contains discovery, subscription, parser, token cache, state, geoblock, time probe, publisher, errors, and backoff helpers. |
+| `configs/sources/polymarket.example.toml` | passed | `execution_enabled=false`, `geoblock_required=true`, `custom_feature_enabled=true`, user auth env names, rate budgets, and local CSV config are present. |
+| `docs/adapters/polymarket.md` | passed | Documents Phase 4 scope, discovery, WS, user WS, geoblock/time, SourceState, raw topics, and non-goals. |
+| Required Polymarket fixtures | passed | Fixtures cover discovery, market WS events, user order/fill, geoblock, time, and contract baseline order response. |
+| Polymarket tests | passed | Unit/integration tests live under `crates/source-sdk/tests/`; adapter tests exist under service crates. |
+| Watchlist support | passed | `crates/domain/src/ws_watchlist.rs`, adapter watchlist helpers, and mapping output exist. |
+| Makefile targets | passed | Includes Polymarket, local CSV, mapping, and watchlist targets. |
+| CI workflow | passed by inspection | CI avoids credentialed user WS and live probes. |
 
-Polymarket SDK module structure:
+## Current Operator Flow
 
-- `discovery.rs`
-- `error.rs`
-- `geoblock.rs`
-- `market_ws.rs`
-- `mod.rs`
-- `parser.rs`
-- `publisher.rs`
-- `state.rs`
-- `subscription.rs`
-- `time_probe.rs`
-- `token_cache.rs`
+The current default capture flow is:
 
-Polymarket adapter service files:
+```bash
+make live-watchlist
+make therundown-csv-run
+HTTPS_PROXY=http://127.0.0.1:6244 HTTP_PROXY=http://127.0.0.1:6244 ALL_PROXY=http://127.0.0.1:6244 make polymarket-csv-run
+```
 
-- `services/adapter-polymarket-market/src/app.rs`
-- `services/adapter-polymarket-market/src/config.rs`
-- `services/adapter-polymarket-market/src/lib.rs`
-- `services/adapter-polymarket-market/src/main.rs`
-- `services/adapter-polymarket-user/src/app.rs`
-- `services/adapter-polymarket-user/src/config.rs`
-- `services/adapter-polymarket-user/src/lib.rs`
-- `services/adapter-polymarket-user/src/main.rs`
+`make live-watchlist` writes:
 
-## Command Results
+```text
+output/live-mapping/ws_watchlist.json
+```
+
+Both market WS adapters now use this file by default:
+
+| Adapter | Default behavior |
+| --- | --- |
+| `adapter-therundown --mode ws` | Loads `output/live-mapping/ws_watchlist.json`, subscribes to matched `event_ids` and `market_ids`, preserves configured sportsbook affiliate filters, and drops non-selected lines locally. |
+| `adapter-polymarket-market --mode market-ws` | Loads `output/live-mapping/ws_watchlist.json` and builds the market subscription from selected Polymarket `asset_ids` using the required `assets_ids` field. |
+
+The old broad subscription behavior is still available only for explicit debugging:
+
+```bash
+--disable-watchlist
+```
+
+Normal CSV capture should not use `--disable-watchlist`.
+
+## Watchlist Selection Policy
+
+The watchlist is an operator capture filter, not a trading signal and not final Phase 6 canonical mapping.
+
+Selection rule:
+
+- Match by sport, date, team/player names, market type, period, and line for spread/total.
+- Home/away order is audit metadata only and is not required.
+- Every matched event keeps at most one market per type:
+  - one moneyline,
+  - one spread line,
+  - one total line.
+- For spread/total, if multiple lines match:
+  - choose the line with the largest matched market count,
+  - if counts tie, choose the median available line.
+- For the final selected event/market type, subscribe to one Polymarket condition/token pair after stable confidence/order sorting.
+
+Test coverage:
+
+- `test_ws_watchlist_selects_one_market_per_event_type_by_count_then_median_line`
+- `test_therundown_parser_expands_multiple_distinct_spread_lines`
+- `test_spread_and_total_candidates_require_same_line`
+- `watchlist_extracts_ws_subscription_ids`
+- `watchlist_overrides_therundown_event_and_market_filters_but_keeps_affiliates`
+- `watchlist_filters_therundown_ws_payload_by_event_market_and_line`
+- `watchlist_provides_polymarket_assets_for_market_subscription`
+
+## Fresh Command Results
+
+Commands run for this rewrite:
 
 | Command | Result | Evidence |
 | --- | --- | --- |
 | `make contract-test` | passed | External API contract smoke checks passed. |
-| `make fmt` | passed | `cargo fmt --all --check` passed. |
-| `make clippy` | passed | `cargo clippy --workspace --all-targets -- -D warnings` passed. |
-| `make test` | passed | Workspace tests passed, including Polymarket unit/integration tests. |
-| `make therundown-test` | passed | 15 unit, 14 integration, and adapter health test passed. |
-| `make polymarket-test` | passed | 10 Polymarket unit, 10 Polymarket integration, and both adapter crates passed. |
-| `make polymarket-integration-test` | passed | 10 Polymarket integration tests passed. |
-| `make adapter-polymarket-market` | passed | Market adapter crate built successfully. |
-| `make adapter-polymarket-user` | passed | User adapter crate built successfully. |
-| `make check` | passed | fmt, clippy, workspace tests, contract, TheRundown, and Polymarket tests passed. |
-| `make polymarket-contract-test` | passed | Contract plus Polymarket test target passed. |
-| `make polymarket-mock` | passed | Runs one market WS mock smoke test; narrower than the full integration suite. |
-| `make polymarket-public-probe` | passed | `active_sports_markets=262`, `filtered_closed=546`, `filtered_non_sports=73`, `token_cache_tokens=524`, topic `raw.polymarket.market`. |
-| `make polymarket-geoblock-probe` | passed | `blocked=false`, country `HK`, IP printed as `<redacted-ip>`, `live_execution_allowed=false`. |
-| `cargo run -p adapter-polymarket-market -- --config configs/sources/polymarket.example.toml --mode time-probe` | passed | `offset_ms=1000`, `large_offset_warning=false`. |
-| `cargo run -p adapter-polymarket-user -- --config configs/sources/polymarket.example.toml --mode auth-check` | passed | Missing user credentials reported as `auth_missing`; no panic and no env values printed. |
+| `make polymarket-test` | passed | 11 Polymarket unit tests, 10 Polymarket integration tests, market adapter tests, user adapter tests, and user markets-file tests passed. |
+| `make local-csv-test` | passed | 19 local CSV tests passed. |
+| `make mapping-test` | passed | 18 live matching/watchlist tests passed. |
+| `cargo test -p quantsys-domain --test ws_watchlist` | passed | 1 watchlist DTO test passed. |
+| `cargo test -p adapter-therundown --test watchlist` | passed | 2 TheRundown watchlist tests passed. |
+| `cargo test -p adapter-polymarket-market --test watchlist` | passed | 1 Polymarket watchlist test passed. |
+| `cargo fmt --all --check` | passed | Rust formatting clean. |
+| `cargo clippy -p quantsys-domain -p adapter-therundown -p adapter-polymarket-market --all-targets -- -D warnings` | passed | Targeted clippy clean. |
+| `cargo build -p adapter-polymarket-market -p adapter-polymarket-user` | passed | Polymarket adapter binaries build. |
 
-No required command failed.
+Commands not re-run during this rewrite:
 
-## Unit Test Coverage Matrix
+| Command | Status | Reason |
+| --- | --- | --- |
+| `make check` | not rerun | Large aggregate target; targeted Phase 4 and watchlist checks were run fresh. |
+| `make test` | not rerun | `make polymarket-test`, domain watchlist, mapping, and local CSV suites were run fresh. |
+| `make therundown-test` | not rerun | This report focuses on Phase 4 plus watchlist interaction; TheRundown watchlist tests were run fresh. |
+| `make polymarket-public-probe` | not rerun | Public network probe is optional and not a substitute for mock tests. |
+| `make polymarket-geoblock-probe` | not rerun | Public network probe is optional; fixture/mock geoblock tests were run. |
+
+## Polymarket Unit Coverage Matrix
 
 | Requirement | Result | Evidence |
 | --- | --- | --- |
 | Market subscription payload contract | passed | `market_subscription_payload_uses_assets_ids_and_custom_feature_contract` |
-| `assets_ids` field correct | passed | Same test asserts `assets_ids` present. |
-| `asset_ids` field forbidden | passed | Same test rejects payload containing `asset_ids`. |
-| `custom_feature_enabled` field correct | passed | Same test asserts `true`. |
+| `assets_ids` present | passed | Same test. |
+| `asset_ids` forbidden | passed | Same test rejects invalid key. |
+| `custom_feature_enabled=true` | passed | Same test. |
 | User subscription payload contract | passed | `user_subscription_payload_uses_markets_condition_ids_and_redacts_auth` |
-| User subscription uses `markets` condition IDs | passed | Same test asserts `markets[0]`. |
-| User auth secret redaction | passed | Same test checks redacted JSON and `Debug`/`Display`. |
-| Discovery parser | passed | `discovery_parser_filters_active_open_sports_markets_and_builds_token_cache` |
-| Discovery active/open filters | passed | Same test covers active event/market and closed filtering. |
-| Sports market filter | passed | Same test covers sports and non-sports counters. |
-| Token cache insert/lookup/TTL | passed | Same test covers upsert, condition/token/slug/outcome, and TTL expiry. |
-| `condition_id -> token_ids` | passed | Same test. |
-| `token_id -> condition_id` | passed | Same test. |
-| `book` parser | passed | `market_ws_parser_dispatches_supported_market_event_types` |
-| `price_change` parser | passed | Same test. |
-| `best_bid_ask` parser | passed | Same test. |
-| `last_trade_price` parser | passed | Same test. |
-| `tick_size_change` parser | passed | Same test. |
-| `new_market` parser | passed | Same test. |
-| `market_resolved` parser | passed | Same test. |
+| User subscription uses condition IDs in `markets` | passed | Same test. |
+| Auth redaction | passed | Same test checks redacted JSON and credential `Debug`/`Display`. |
+| Discovery active/open/sports filter | passed | `discovery_parser_filters_active_open_sports_markets_and_builds_token_cache` |
+| Token cache condition/token lookups | passed | Same test. |
+| Token cache TTL | passed | Same test. |
+| Market `book` parser | passed | `market_ws_parser_dispatches_supported_market_event_types` |
+| Market `price_change` parser | passed | Same test. |
+| Market `best_bid_ask` parser | passed | Same test. |
+| Market `last_trade_price` parser | passed | Same test. |
+| Market `tick_size_change` parser | passed | Same test. |
+| Market `new_market` parser | passed | Same test. |
+| Market `market_resolved` parser | passed | Same test. |
 | Unknown market event | passed | `market_ws_parser_preserves_unknown_and_rejects_missing_required_fields` |
-| Missing market required field | passed | Same test returns parser error; integration publishes DLQ. |
-| User order parser | passed | `user_ws_parser_parses_order_fill_and_redacts_secrets_from_raw` |
-| User fill parser | passed | Same test. |
-| User order_update parser | passed | Same test covers inline `order_update`. |
-| Geoblock blocked parser | passed | `geoblock_parser_redacts_ip_and_state_machine_fails_closed_when_blocked` |
-| Geoblock allowed parser | passed | Same test. |
-| Malformed geoblock parser | passed | Same test asserts parse error for missing `blocked`. |
-| Time parser | passed | `time_probe_parser_calculates_offsets_and_large_offset_warning` |
-| Missing server time handling | passed | Same test asserts parser error. |
-| Malformed server time handling | passed | Same test asserts parser error. |
-| Negative offset | passed | Same test. |
-| Large offset warning | passed | Same test. |
-| SourceState geoblock blocked gate | passed | Geoblock state test. |
-| SourceState geoblock unknown fail closed | weak | State machine implements `geoblock_unknown`, but no direct unit test; adapter malformed path does not set it. |
-| SourceState market stale gate | passed | `source_state_covers_market_stale_user_auth_missing_and_market_resolved` |
-| SourceState user auth_missing | passed | Same test. |
-| SourceState user stale | passed | Integration stale test. |
-| SourceState user auth_failed | weak | State function exists; no direct test or mock auth failure scenario. |
-| SourceState user disabled | weak | Initial user state is disabled; no direct assertion. |
-| SourceState market_resolved | passed | Unit and integration tests. |
-| Payload hash deterministic | passed | `polymarket_payload_hash_and_raw_message_construction_are_deterministic` |
-| RawMessage construction | passed | Same test and parser tests. |
-| Provider = polymarket | passed | Discovery and RawMessage tests. |
-| Topic routing `raw.polymarket.market` | passed | Integration discovery/market tests. |
-| Topic routing `raw.polymarket.user` | passed | Integration user test. |
-| Secret not in error display | passed | Auth `Debug`/`Display` tests and secret audit. |
-| No-order-call guard | passed | Static audit found no order endpoint mutation call in Phase 4 adapter code. |
+| Missing market required field | passed | Same test and integration DLQ path. |
+| User order/fill/order_update raw parser | passed | `user_ws_parser_parses_order_fill_and_redacts_secrets_from_raw` |
+| Geoblock parser and blocked gate | passed | `geoblock_parser_redacts_ip_and_state_machine_fails_closed_when_blocked` |
+| Time parser normal/negative/large offset | passed | `time_probe_parser_calculates_offsets_and_large_offset_warning` |
+| Payload hash and RawMessage deterministic construction | passed | `polymarket_payload_hash_and_raw_message_construction_are_deterministic` |
+| SourceState stale/auth_missing/market_resolved | passed | `source_state_covers_market_stale_user_auth_missing_and_market_resolved` |
 
-## Integration and Mock Scenario Matrix
+## Integration and Mock Matrix
 
 | Scenario | Result | Evidence |
 | --- | --- | --- |
-| Discovery active markets 200 | passed | `discovery_builds_token_cache_and_publishes_raw_polymarket_market` |
-| Discovery closed markets filtered out | passed | Unit discovery filter test. |
-| Discovery missing token ids | passed | `discovery_missing_token_ids_goes_to_dlq_without_publish` |
-| Discovery sports filter | passed | Unit discovery filter test. |
-| Discovery to token cache | passed | Integration discovery test. |
-| Discovery to `raw.polymarket.market` publish | passed | Integration discovery test asserts topic. |
-| Token cache to market WS subscribe | passed | `token_cache_constructs_market_ws_subscription_with_assets_ids` |
-| Market WS subscribe uses `assets_ids` | passed | Unit and integration subscription tests. |
-| Market WS rejects `asset_ids` | passed | Unit subscription validator test. |
-| Market WS `book` to RawMessage to market topic | passed | `market_ws_events_publish_raw_and_market_resolved_updates_source_state` |
-| Market WS `price_change` to RawMessage to market topic | passed | Same integration test. |
-| Market WS `best_bid_ask` to RawMessage to market topic | passed | Same integration test. |
-| Market WS `last_trade_price` to RawMessage to market topic | passed | Same integration test. |
-| Market WS `tick_size_change` to RawMessage to market topic | passed | Same integration test. |
-| Market WS `new_market` to RawMessage to market topic | passed | Same integration test. |
-| Market WS `market_resolved` to RawMessage + SourceState | passed | Same integration test. |
-| Market WS unknown event type | passed | `unknown_or_missing_market_ws_schema_goes_to_raw_or_dlq` |
-| Market WS missing required field | passed | Same integration test publishes DLQ. |
-| Market WS PING/PONG | partial | Service loop sends `PING` and handles `PONG`; tests cover `mark_pong`, stale, and backoff, but not a real mock WS PING/PONG handshake. |
-| Market WS stale timeout | passed | `ping_pong_stale_detection_reconnect_backoff_and_rate_limit_state` |
-| Market WS reconnect/backoff | passed | Same integration test covers backoff state. |
-| User WS auth missing | passed | `user_auth_missing_is_disabled_without_failing_market_adapter` and CLI `auth-check`. |
-| User WS auth success | partial | Auth payload construction with credentials is tested; no mock user WS handshake accepting auth. |
-| User WS order update to user topic | passed | `user_ws_order_and_fill_publish_raw_polymarket_user_without_credentials_in_payload` |
-| User WS fill update to user topic | passed | Same integration test. |
-| User WS unknown event raw | weak | Parser supports unknown user events; no explicit integration assertion. |
-| User WS secret redaction | passed | Unit and integration tests. |
-| Geoblock blocked=true to SourceState blocked | passed | Integration geoblock probe test. |
-| Geoblock blocked=false to SourceState ok | passed | Integration geoblock probe test. |
-| Geoblock malformed to SourceState unknown/fail closed | failed | Parser error is covered, but `probe_geoblock` returns before setting `SourceState=polymarket_geoblock unknown`. |
-| Geoblock network error to unknown/fail closed | partial | Code sets `geoblock_unknown` on transport/HTTP error; no explicit integration test. |
-| Time probe ok | passed | Integration time probe test and public time-probe CLI. |
-| Time probe malformed to degraded | failed | Parser error is covered, but `probe_time_at` returns before setting `SourceState=polymarket_time degraded`. |
-| Endpoint rate limited | passed | Integration marks endpoint budget rate-limited and state `RateLimited`; no HTTP 429 transport test for Polymarket. |
-| Token cache TTL expired | passed | Unit token cache TTL assertions. |
-| Fixture replay `market_book.json` | passed | Unit and integration parser/publish tests. |
-| Fixture replay `market_price_change.json` | passed | Unit and integration parser/publish tests. |
-| Fixture replay `market_best_bid_ask.json` | passed | Unit and integration parser/publish tests. |
-| Fixture replay `user_order_update.json` | passed | Unit and integration parser/publish tests. |
-| Fixture replay `geoblock_blocked.json` | passed | Unit and integration geoblock tests. |
+| Discovery builds token cache | passed | `discovery_builds_token_cache_and_publishes_raw_polymarket_market` |
+| Discovery publishes `raw.polymarket.market` | passed | Same test asserts topic. |
+| Discovery missing token ids to DLQ | passed | `discovery_missing_token_ids_goes_to_dlq_without_publish` |
+| Token cache to market subscription | passed | `token_cache_constructs_market_ws_subscription_with_assets_ids` |
+| Market WS supported events publish raw | passed | `market_ws_events_publish_raw_and_market_resolved_updates_source_state` |
+| Market resolved updates SourceState | passed | Same test. |
+| Unknown market event kept raw | passed | `unknown_or_missing_market_ws_schema_goes_to_raw_or_dlq` |
+| Missing required field to DLQ | passed | Same test. |
+| User order/fill to `raw.polymarket.user` | passed | `user_ws_order_and_fill_publish_raw_polymarket_user_without_credentials_in_payload` |
+| User secrets redacted from raw | passed | Same test. |
+| Geoblock blocked/allowed happy path | passed | `geoblock_and_time_probes_publish_raw_and_update_source_state` |
+| Time happy path | passed | Same test. |
+| PING/PONG/stale/backoff state | passed at state level | `ping_pong_stale_detection_reconnect_backoff_and_rate_limit_state` |
+| User auth missing does not break market adapter | passed | `user_auth_missing_is_disabled_without_failing_market_adapter` |
+| 1k mock publish smoke | passed | `raw_publish_path_handles_1k_market_messages_with_mock_p95_under_50ms` |
 
-## `raw.polymarket.market` Output Validation
+## Raw Topic Validation
 
-| Validation Point | Result | Notes |
-| --- | --- | --- |
-| Discovery outputs RawMessage | passed | Discovery parser builds `RawMessage` with `SourceChannel::RestDiscovery`; integration publishes to market topic. |
-| WS `book` outputs RawMessage | passed | Parser and integration tests. |
-| WS `price_change` outputs RawMessage | passed | Parser and integration tests. |
-| WS `best_bid_ask` outputs RawMessage | passed | Parser and integration tests. |
-| WS `last_trade_price` outputs RawMessage | passed | Parser and integration tests. |
-| WS `tick_size_change` outputs RawMessage | passed | Parser and integration tests. |
-| WS `new_market` outputs RawMessage | passed | Parser and integration tests. |
-| WS `market_resolved` outputs RawMessage | passed | Parser and integration tests. |
-| `RawMessage.provider=polymarket` | passed | Unit assertions. |
-| `source_channel=rest_discovery/ws_market/rest_geoblock/rest_time` | passed | Code and tests. |
-| `provider_event_id` traceable to condition id/event slug | passed | Market parser uses `market`; discovery uses first discovered condition id. |
-| `provider_market_id` traceable to token/asset/condition | passed | Market parser uses `asset_id` or condition id; discovery uses first token. |
-| `payload_hash` deterministic | passed | Unit hash test. |
-| `raw_id` deterministic | passed | Unit RawMessage test. |
-| EventEnvelope topic = `raw.polymarket.market` | passed | Publisher routes non-user Polymarket channels to market topic. |
-| No `norm.quote` output | passed | Polymarket publisher only emits raw topics. |
-| No mapping/signal/order/risk/execution output | passed | No Phase 4 Polymarket adapter output to future topics. Future topics remain Phase 2 eventbus metadata only. |
+### `raw.polymarket.market`
 
-## `raw.polymarket.user` Output Validation
+Passed:
 
-| Validation Point | Result | Notes |
-| --- | --- | --- |
-| User order update outputs RawMessage | passed | Parser and integration tests. |
-| User fill outputs RawMessage | passed | Parser and integration tests. |
-| User unknown event raw or structured error | weak | Parser supports unknown raw; explicit integration coverage missing. |
-| `RawMessage.provider=polymarket` | passed | Parser construction. |
-| `source_channel=ws_user` | passed | Unit and integration tests. |
-| EventEnvelope topic = `raw.polymarket.user` | passed | Publisher maps `WsUser` to user raw topic. |
-| Auth secret not in RawMessage | passed | Payload redaction tests. |
-| Auth secret not in logs/errors | passed | Auth missing prints env names only; credentials `Debug`/`Display` redacted. |
-| No order endpoint call | passed | Static audit found no order mutation call. |
-| No signed order generation | passed | Static audit found no signer/signed order implementation. |
-| No private key read | passed | Config uses L2 auth env names only; no private key field. |
-| No reconcile logic | passed | User adapter parses and publishes raw only. |
-| Missing credentials do not panic | passed | CLI `auth-check` exits successfully with `auth_missing`. |
+- Discovery raw is wrapped as `RawMessage`.
+- Market WS raw events are wrapped as `RawMessage`.
+- Supported event types include `book`, `price_change`, `best_bid_ask`, `last_trade_price`, `tick_size_change`, `new_market`, and `market_resolved`.
+- Publisher routes non-user Polymarket raw events to `raw.polymarket.market`.
+- Provider is `polymarket`.
+- Source channels include `rest_discovery`, `ws_market`, `rest_geoblock`, and `rest_time`.
+- `payload_hash` and `raw_id` are deterministic.
+
+Not implemented, by design:
+
+- `norm.quote`
+- `mapping.decision`
+- `signal.event`
+- `order.intent`
+- `risk.decision`
+- `execution.request`
+
+### `raw.polymarket.user`
+
+Passed:
+
+- User order/order_update raw is wrapped as `RawMessage`.
+- User fill raw is wrapped as `RawMessage`.
+- Publisher routes user-channel events to `raw.polymarket.user`.
+- Missing user credentials produce `auth_missing` and do not fail market ingestion.
+- Auth payload secrets are not copied into raw output.
+
+Weak coverage:
+
+- Unknown user event raw publish exists in parser behavior but lacks a dedicated integration assertion.
+- Mock user WS auth success handshake is not covered; subscription/auth payload construction is covered.
 
 ## SourceState Validation
 
-| SourceState | Result | Evidence |
+| State | Result | Notes |
 | --- | --- | --- |
-| `polymarket_market ok` | passed | Discovery and market WS handlers call `market_ok`; tests observe ok paths. |
-| `polymarket_market stale` | passed | Integration stale test. |
-| `polymarket_market rate_limited` | passed | Endpoint budget integration test. |
-| `polymarket_market schema_error` | passed | Unknown/missing schema paths. |
+| `polymarket_market ok` | passed | Market handlers set ok on supported messages. |
+| `polymarket_market stale` | passed | Stale detection test. |
+| `polymarket_market rate_limited` | passed | Endpoint budget state test. |
+| `polymarket_market schema_error` | passed | Unknown/missing schema tests. |
 | `polymarket_market market_resolved` | passed | Unit and integration tests. |
-| `polymarket_user ok` | passed | User order/fill integration test. |
-| `polymarket_user disabled` | partial | Initial state is disabled; no direct test assertion. |
-| `polymarket_user auth_missing` | passed | Unit, integration, and CLI auth-check. |
-| `polymarket_user auth_failed` | weak | State function exists; no mock auth failure test. |
-| `polymarket_user stale` | passed | Integration stale test. |
-| `polymarket_geoblock ok` | passed | Integration allowed geoblock test. |
-| `polymarket_geoblock blocked` | passed | Integration blocked geoblock test. |
-| `polymarket_geoblock unknown` | failed for malformed response | State function exists and transport errors set unknown, but malformed successful geoblock responses do not update SourceState. |
-| `polymarket_time ok` | passed | Integration time probe test and public CLI. |
-| `polymarket_time degraded` | failed for malformed response | Large offset can produce degraded state, but malformed successful time responses do not update SourceState. |
+| `polymarket_user ok` | passed | User order/fill integration. |
+| `polymarket_user disabled` | partial | Initial state is disabled; no dedicated assertion in current report run. |
+| `polymarket_user auth_missing` | passed | Unit/integration and user CLI behavior. |
+| `polymarket_user auth_failed` | weak | State function exists; no mock auth-failure test. |
+| `polymarket_user stale` | passed | Stale detection test. |
+| `polymarket_geoblock ok` | passed | Allowed fixture path. |
+| `polymarket_geoblock blocked` | passed | Blocked fixture path. |
+| `polymarket_geoblock unknown` | partial | Transport errors set unknown; malformed successful response still needs direct adapter-state coverage. |
+| `polymarket_time ok` | passed | Time fixture path. |
+| `polymarket_time degraded` | partial | Large offset path exists; malformed successful response needs direct adapter-state coverage. |
 
-Rules:
+Rules still held:
 
-- Market WS stale disables live signal input: passed.
-- User WS stale leaves live execution reconciliation not ready: passed.
-- Geoblock blocked sets `live_execution_allowed=false` and `block_reason=geoblocked`: passed.
-- Geoblock unknown in live mode must fail closed: partial; state function does this, but malformed probe response does not reach it.
-- Phase 4 does not enable live execution: passed.
-- `execution_enabled` defaults false: passed.
-- SourceState errors contain no secrets: passed.
+- `execution_enabled` defaults to `false`.
+- Geoblock blocked sets `live_execution_allowed=false`.
+- Phase 4 does not enable live execution.
+- SourceState errors must not contain secrets.
 
-## Geoblock and Time Probe Validation
-
-Geoblock:
+## Geoblock and Time Probe
 
 | Case | Result | Notes |
 | --- | --- | --- |
-| blocked=true | passed | Fixture and integration. |
-| blocked=false | passed | Fixture, integration, and public geoblock probe. |
-| malformed response | failed at adapter state level | Parser rejects malformed payload, but adapter does not set `polymarket_geoblock unknown` before returning. |
-| network error | partial | Code sets `geoblock_unknown` on transport/HTTP error; no explicit integration test. |
-| IP redaction | passed | Parser replaces IP with `<redacted-ip>`; public probe prints redacted IP. |
-| Probe result not live approval | passed | Public output keeps `live_execution_allowed=false`; docs state no live approval. |
+| Geoblock `blocked=true` | passed | Fixture/unit/integration path. |
+| Geoblock `blocked=false` | passed | Fixture/unit/integration path. |
+| Geoblock IP redaction | passed | Parser emits `<redacted-ip>`. |
+| Geoblock malformed response | partial | Parser rejects malformed payload; adapter-level unknown state needs stronger test/handling. |
+| Geoblock network error | partial | Code sets unknown on transport error; direct test should be added. |
+| Time normal offset | passed | Fixture/integration path. |
+| Time negative offset | passed | Unit parser path. |
+| Time large offset warning | passed | Unit parser/state path. |
+| Time missing/malformed response | partial | Parser rejects bad time; adapter-level degraded state needs stronger test/handling. |
 
-Time:
+## Local CSV and Watchlist Validation
 
-| Case | Result | Notes |
-| --- | --- | --- |
-| normal offset | passed | Fixture integration and public time-probe CLI. |
-| missing server time | parser passed, adapter failed | Parser rejects missing time; adapter does not set degraded on parser error. |
-| malformed time | parser passed, adapter failed | Parser rejects malformed time; adapter does not set degraded on parser error. |
-| negative offset | passed | Unit parser test. |
-| large offset warning | passed | Unit parser/state path. |
-| Not used for trading logic | passed | No trading logic exists in Phase 4. |
-| Docs mention future latency-engine use | passed | Documented in `docs/adapters/polymarket.md`. |
+Local CSV is not a production archive and not a trading signal. It is an observation aid for comparing TheRundown and Polymarket rows.
+
+Passed:
+
+- Provider folders are separated.
+- TheRundown rows can be separated by sportsbook display name.
+- Polymarket rows use discovery metadata to avoid `unknown_sport`, `unknown_league`, `unknown_time`, and missing team names when discovery data exists.
+- CSV rows distinguish source-generated time and local fetch time.
+- Header is written once.
+- Append mode does not overwrite.
+- `output/local-csv` is ignored.
+- Cross-process CSV/index writes use a local lock and atomic JSON writes.
+- Empty or abandoned index/lock recovery is tested.
+- Secret-like strings are redacted from CSV output.
+
+Watchlist defaults:
+
+- `adapter-therundown --mode ws` now requires the default watchlist unless `--disable-watchlist` is explicitly passed.
+- `adapter-polymarket-market --mode market-ws` now requires the default watchlist unless `--disable-watchlist` is explicitly passed.
+- Normal `make therundown-csv-run` and `make polymarket-csv-run` therefore capture selected matched markets, not broad full market sets.
 
 ## Secret Safety Audit
 
-Result: **passed with minor documentation placeholders only**.
+Result: passed for reviewed Phase 4 paths.
 
-Findings:
+- `.env` and `.env.*` are ignored.
+- Config stores auth env var names, not secret values.
+- User credentials redact `Debug` and `Display`.
+- Auth JSON redaction covers `apiKey`, `secret`, and `passphrase`.
+- User raw redaction covers auth, signature-like fields, private-key-like fields, and transaction hashes.
+- Geoblock IP is redacted.
+- Public probe output does not include secrets.
+- No test output from the fresh commands printed secrets.
 
-- `.gitignore` ignores `.env` and `.env.*`, while allowing `.env.example`.
-- No real Polymarket secret, passphrase, API key, private key, or signature was found in fixtures or docs.
-- Fixtures use placeholders such as `<redacted-secret>`, `<redacted-passphrase>`, `<redacted-signature>`, `<redacted-transaction-hash>`, and `<redacted-ip>`.
-- `L2Credentials` redacts `Debug` and `Display`.
-- User raw parser redacts `apiKey`, `secret`, `passphrase`, `signature`, private-key-like fields, and transaction hashes before RawMessage construction.
-- CLI auth-check prints env var names only, not values.
-- Public geoblock probe prints `ip=<redacted-ip>`.
-- The only `create_order_response.json` fixture is a contract baseline fixture; no Phase 4 adapter code calls an order endpoint.
+## No-Order-Call and Phase Boundary Check
 
-## Public Probe Results
+Result: passed by static audit and tests.
 
-| Probe | Result | Output |
-| --- | --- | --- |
-| `make polymarket-public-probe` | passed | `active_sports_markets=262`, `filtered_closed=546`, `filtered_non_sports=73`, `token_cache_tokens=524`, topic `raw.polymarket.market`. |
-| `make polymarket-geoblock-probe` | passed | `blocked=false`, country `HK`, region empty, `ip=<redacted-ip>`, `live_execution_allowed=false`. |
-| Public market WS smoke | not covered | `market-ws` mode exists but is a long-running loop. There is no finite Makefile smoke target that connects, subscribes, observes one public market WS message, and exits. |
+No Phase 4 adapter code implements or calls:
 
-No public probe used credentials, private keys, signed orders, or order endpoints.
+- create order,
+- cancel order,
+- signer,
+- signed order,
+- private key read,
+- execution gateway,
+- paper broker,
+- strategy engine,
+- risk engine,
+- order intent,
+- live execution.
 
-## Performance Smoke
+The presence of `tests/fixtures/external/polymarket/create_order_response.json` remains a contract fixture only. It is not used by adapter runtime code to place orders.
 
-| Requirement | Result | Notes |
-| --- | --- | --- |
-| 1k market updates raw publish path | passed | `raw_publish_path_handles_1k_market_messages_with_mock_p95_under_50ms` publishes 1,000 mock updates. |
-| P95 publish < 50ms | partial | Test name says P95, but implementation checks average per-message elapsed time, not actual p95 latency distribution. |
-| 1k token IDs memory stable | weak | Config max is 1,000 and cache path is exercised, but no explicit memory measurement exists. |
-| Reconnect/backoff not breaking rate budget | partial | Backoff and endpoint budget states are tested; no full loop budget exhaustion test. |
+## CI Status
 
-No performance test uses real Polymarket for load.
-
-## Documentation Consistency
-
-`docs/adapters/polymarket.md` covers:
-
-- Phase 4 scope.
-- Adapter architecture.
-- Public discovery.
-- Condition/token cache.
-- Market WS and `assets_ids` contract.
-- `custom_feature_enabled`.
-- Market event types: `book`, `price_change`, `best_bid_ask`, `last_trade_price`, `tick_size_change`, `new_market`, `market_resolved`.
-- User WS read-only flow.
-- Auth redaction.
-- Geoblock and time probes.
-- SourceState.
-- `raw.polymarket.market` and `raw.polymarket.user`.
-- Endpoint budgets.
-- PING/PONG and stale/reconnect.
-- Token cache TTL.
-- Mock/fixture testing.
-- Adapter/test commands.
-- Phase 5/6/8/13 boundaries.
-- Explicit non-goals: real orders, signer, execution, strategy, risk, mapping, normalized quote.
-
-Inconsistencies:
-
-- Docs state malformed or unknown geoblock is a fail-closed condition, but `probe_geoblock` does not set `SourceState=polymarket_geoblock unknown` on malformed successful responses.
-- Docs list geoblock malformed as covered, but integration tests do not cover adapter-level malformed geoblock state.
-- Time probe docs imply degraded state for missing/malformed time; adapter parser-error path returns without setting `polymarket_time degraded`.
-
-## CI Check
-
-`.github/workflows/ci.yml` runs:
+By inspection, `.github/workflows/ci.yml` runs:
 
 - `cargo fmt --all --check`
 - `cargo clippy --workspace --all-targets -- -D warnings`
@@ -372,106 +340,82 @@ Inconsistencies:
 - `make contract-test`
 - `make therundown-test`
 - `make polymarket-test`
-- topic init dry-run
 
-CI does not run live user WS probes, does not require Polymarket user credentials, does not call order endpoints, does not depend on private keys, and does not start a long WS soak.
+CI does not:
 
-## Phase Boundary Check
+- require real Polymarket user credentials,
+- run live user WS,
+- call order endpoints,
+- require private keys,
+- run a long public WS soak.
 
-Result: **passed**.
+## Weak or Missing Coverage
 
-Static search did not find Phase 4 adapter implementation of:
+These items keep the overall Phase 4 verdict at **PARTIAL** rather than a clean hard-gate PASS:
 
-- signer
-- signed order
-- create order
-- cancel order
-- execution gateway
-- paper broker
-- risk engine
-- strategy engine
-- edge calculation
-- lead-lag signal
-- no-vig as formal normalized quote
-- mapping decision
-- order intent
-- frontend trading UI
-- live execution
-
-Notes:
-
-- `crates/eventbus` and `docs/schema/topic-catalog.md` contain future topic metadata (`norm.quote`, `mapping.decision`, `order.intent`, `risk.decision`, `execution.request`) from Phase 2; Polymarket Phase 4 publisher does not emit them.
-- `tests/fixtures/external/polymarket/create_order_response.json` is a contract fixture only.
-- `configs/sources/polymarket.example.toml` includes future `clob_orders` rate budget and execution-related config labels, but `execution_enabled=false` and no Phase 4 order path uses them.
-- Parser references `/order/id` only to extract user-channel raw order payload identifiers.
-
-## Failed, Missing, and Weak Coverage
-
-Failed:
-
-1. `probe_geoblock` does not set `SourceState=polymarket_geoblock unknown` on malformed 2xx geoblock payloads. This violates the geoblock unknown/malformed fail-closed requirement.
-2. `probe_time_at` does not set `SourceState=polymarket_time degraded` on malformed or missing 2xx time payloads. This violates the time-probe degraded-state requirement.
-
-Weak or missing coverage:
-
-1. No finite public market WS smoke command exists. `market-ws` is a long-running mode.
-2. Mock PING/PONG is covered through state methods and service code inspection, not a real mock WS server handshake.
-3. User WS auth success is covered by payload construction, not a mock WS auth-accepted connection.
-4. User unknown event raw publish lacks explicit integration assertion.
-5. `user_auth_failed`, `user_disabled`, `geoblock_unknown`, and adapter-level `time degraded` need direct tests.
-6. Endpoint rate limit is tested by state mutation, not an HTTP 429 Polymarket transport scenario.
-7. Performance smoke checks average per-message time, not true p95.
-8. 1k token cache memory stability has no explicit measurement.
-9. Top-level `tests/integration/` is absent, though crate-level Rust integration tests exist.
-10. `make polymarket-mock` is a narrow single-scenario smoke; full mock coverage is in `make polymarket-integration-test`.
+1. Malformed 2xx geoblock response should set adapter `SourceState=polymarket_geoblock unknown` and remain fail closed. Parser rejection exists, but adapter-state coverage is not strong enough.
+2. Missing/malformed 2xx time response should set adapter `SourceState=polymarket_time degraded`. Parser rejection exists, but adapter-state coverage is not strong enough.
+3. There is no finite public market WS smoke target that subscribes with `assets_ids`, observes one public message or clean timeout, redacts output, and exits.
+4. PING/PONG is covered by service code and state-level tests, but not by a real mock WS handshake.
+5. User WS auth success is covered by payload construction, but not by a mock auth-accepted WS handshake.
+6. User unknown event raw publish lacks a dedicated integration assertion.
+7. Performance smoke checks mock average per-message parser/publish time; it is not a true p95 latency distribution measurement.
+8. 1k token cache memory stability is bounded by config/tests but lacks explicit memory measurement.
 
 ## Phase 4 Done Assessment
 
-Passed:
+Implemented and verified:
 
-- All required make/build/test commands pass.
-- Public discovery mock and live public discovery probe pass.
-- Discovery builds condition/token cache.
-- Token cache supports condition-to-token and token-to-condition lookup.
-- Market subscription uses `assets_ids`, rejects `asset_ids`, and includes `custom_feature_enabled=true`.
-- Market WS parser covers all required Phase 4 event types.
-- Market raw publishes to `raw.polymarket.market`.
-- User order/fill raw publishes to `raw.polymarket.user`.
-- Missing user credentials are `auth_missing` and do not break market ingestion.
-- Geoblock blocked/allowed happy paths update SourceState.
-- Time normal offset works.
-- Secrets are redacted.
-- No order endpoint, private key, signer, strategy, risk, mapping, normalized quote, paper broker, execution gateway, or frontend trading page was implemented.
-- CI avoids real Polymarket user credentials and live user WS.
+- Polymarket market discovery mock flow.
+- Active/open/sports filtering.
+- Condition/token cache.
+- Market subscription with `assets_ids`.
+- Market WS parser for required event types.
+- Market raw publish to `raw.polymarket.market`.
+- User order/fill raw publish to `raw.polymarket.user`.
+- User credential missing path as `auth_missing`.
+- Geoblock blocked/allowed happy paths.
+- Time normal offset path.
+- Local CSV observation path.
+- Default matched watchlist capture path.
+- Secret redaction.
+- No order endpoint, signer, private key, strategy, risk, or execution.
 
-Not done:
+Not fully done for strict hard-gate PASS:
 
-- Geoblock malformed/unknown adapter state handling is incomplete.
-- Time malformed/missing adapter degraded handling is incomplete.
-- Some smoke tests are state-level rather than transport/WS-level.
-- Performance smoke is useful but not a true p95 measurement.
+- Adapter-level malformed geoblock/time state handling.
+- Finite public market WS smoke command.
+- Stronger mock WS handshake coverage.
+- Stronger p95/memory smoke measurement.
 
 ## Phase 5 Gate
 
-Phase 4 should be treated as **PARTIAL**, not PASS. Do not enter Phase 5 until at least the failed items are fixed and tested:
+Recommendation: **do not treat Phase 4 as a clean PASS yet**.
 
-1. On malformed 2xx geoblock response, set `SourceState=polymarket_geoblock unknown`, keep `live_execution_allowed=false`, and publish a sanitized structured error/DLQ record.
-2. On malformed or missing 2xx time response, set `SourceState=polymarket_time degraded` and publish a sanitized structured error/DLQ record or equivalent probe error state.
-3. Add direct tests for geoblock malformed adapter state and time malformed adapter state.
+It is reasonable to continue local data observation and matched-market capture with the current implementation. It is not yet a strict Phase 5 hard-gate PASS until the weak items above are addressed.
 
-Recommended before Phase 5:
+Required before a strict Phase 5 gate:
 
-1. Add a finite `polymarket-market-ws-smoke` or equivalent public WS smoke command that subscribes with `assets_ids`, observes one message or clean timeout, redacts output, and exits.
-2. Add mock WS handshake tests for PING/PONG and user auth success.
-3. Replace the average publish smoke with a true p95 measurement, or rename the test/report to avoid claiming p95.
-4. Add a 1k token cache memory smoke or document the measured upper bound.
+1. Add tests and behavior for malformed geoblock response to set `polymarket_geoblock unknown` and fail closed.
+2. Add tests and behavior for malformed/missing time response to set `polymarket_time degraded`.
+3. Add a finite public market WS smoke command or mock-equivalent transport smoke.
+4. Add direct user unknown-event and user auth-success mock tests.
+5. Clarify or improve the performance smoke so it either measures true p95 or stops claiming p95.
 
 ## Live Execution Blockers
 
-Live execution remains blocked by design and must continue to be blocked until future phases provide:
+Live execution remains blocked by design.
 
-- Durable raw archive and replay readiness from Phase 5.
-- Canonical mapping from Phase 6.
-- Dry-run/signal-only validation from Phase 8.
-- Paper broker, risk, audit, signer isolation, execution gateway, and live execution gates from later phases.
-- Hard geoblock, stale, secret, and no-order-call guarantees verified at adapter and integration levels.
+Still required in later phases:
+
+- Phase 5 durable raw archive and replay.
+- Phase 6 canonical event/market mapping.
+- Phase 8 dry-run validation.
+- Paper broker.
+- Risk engine.
+- Execution audit.
+- Signer isolation.
+- Execution gateway.
+- Live geoblock/stale/auth hard gates.
+
+The current watchlist and CSV outputs are observation and capture controls only. They must not be interpreted as trading signals or execution approval.
