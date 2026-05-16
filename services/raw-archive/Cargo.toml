@@ -1,0 +1,25 @@
+[package]
+name = "raw-archive"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "raw_archive"
+path = "src/lib.rs"
+
+[dependencies]
+anyhow.workspace = true
+chrono.workspace = true
+clap.workspace = true
+quantsys-domain = { path = "../../crates/domain" }
+quantsys-eventbus = { path = "../../crates/eventbus" }
+quantsys-storage = { path = "../../crates/storage" }
+quantsys-telemetry = { path = "../../crates/telemetry" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true

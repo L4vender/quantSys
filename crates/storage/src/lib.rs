@@ -1,12 +1,30 @@
-use chrono::{DateTime, Datelike, Utc};
+use chrono::{DateTime, Datelike, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 
+mod consumer_lag_store;
+mod dlq_store;
 mod local_csv;
+mod object_archive;
+mod rate_budget_store;
+mod raw_index;
+mod source_state_store;
 
+pub use consumer_lag_store::{ConsumerLagSnapshot, InMemoryConsumerLagStore};
+pub use dlq_store::InMemoryDlqStore;
 pub use local_csv::{
     american_odds_to_implied_probability, market_decimal_mid, records_from_raw, CsvProvider,
     CsvProviderRecord, LocalCsvError, LocalCsvSink, LocalCsvWriteResult, MarketFileKey, MarketLine,
 };
+pub use object_archive::{
+    ArchiveError, ArchiveReadRequest, ArchiveReadResult, ArchiveWriteRequest, ArchiveWriteResult,
+    InMemoryObjectArchive, LocalFilesystemObjectArchive, ObjectArchive, ObjectArchiveBackend,
+    ObjectArchiveConfig, ObjectKey, S3CompatibleObjectArchive,
+};
+pub use rate_budget_store::{InMemoryRateBudgetStore, RateBudgetSnapshot, RateBudgetStatus};
+pub use raw_index::{
+    InMemoryRawArchiveIndex, RawArchiveIndexRecord, RawArchiveSearchQuery, RawArchiveUpsertResult,
+};
+pub use source_state_store::{InMemorySourceStateStore, SourceStateSnapshot};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct StorageConfig {
@@ -118,6 +136,18 @@ impl RedisKeyBuilder {
     pub fn source_state(&self, source: &str) -> String {
         format!("{}:source:state:{}", self.prefix, source)
     }
+
+    pub fn source_health(&self, source: &str) -> String {
+        format!("{}:source_health:{}", self.prefix, source)
+    }
+
+    pub fn rate_budget(&self, provider: &str, endpoint: &str) -> String {
+        format!("{}:rate_budget:{}:{}", self.prefix, provider, endpoint)
+    }
+
+    pub fn consumer_lag(&self, topic: &str, consumer_group: &str) -> String {
+        format!("{}:consumer_lag:{}:{}", self.prefix, topic, consumer_group)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -149,6 +179,53 @@ impl ObjectKeyBuilder {
             sanitize(provider),
             sanitize(channel),
             sanitize(provider_event_id),
+            sanitize(raw_id)
+        )
+    }
+
+    pub fn raw_archive_key(
+        &self,
+        provider: &str,
+        source_channel: &str,
+        raw_id: &str,
+        received_at: DateTime<Utc>,
+    ) -> String {
+        self.archive_key("raw", provider, source_channel, raw_id, received_at)
+    }
+
+    pub fn dlq_archive_key(
+        &self,
+        provider: &str,
+        source_channel: &str,
+        raw_id: &str,
+        received_at: DateTime<Utc>,
+    ) -> String {
+        self.archive_key("dlq", provider, source_channel, raw_id, received_at)
+    }
+
+    fn archive_key(
+        &self,
+        kind: &str,
+        provider: &str,
+        source_channel: &str,
+        raw_id: &str,
+        received_at: DateTime<Utc>,
+    ) -> String {
+        let prefix = self.prefix.trim_matches('/');
+        let kind = if prefix.is_empty() {
+            kind.to_string()
+        } else {
+            format!("{prefix}/{kind}")
+        };
+        format!(
+            "{}/{}/{}/{:04}/{:02}/{:02}/{:02}/{}.json",
+            kind,
+            sanitize(provider),
+            sanitize(source_channel),
+            received_at.year(),
+            received_at.month(),
+            received_at.day(),
+            received_at.hour(),
             sanitize(raw_id)
         )
     }

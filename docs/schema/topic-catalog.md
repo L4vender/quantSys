@@ -6,7 +6,7 @@ Topic catalog 的源文件是 `scripts/topic-init/topics.toml`，由 `crates/eve
 |---|---|---|---|---:|---:|
 | `raw.therundown` | `provider_event_id` | `adapter-therundown` | `normalizer`, `raw-archive`, `replay` | 14d | 3 |
 | `raw.polymarket.market` | `provider_market_id` | `adapter-polymarket-market` | `normalizer`, `raw-archive`, `replay` | 14d | 3 |
-| `raw.polymarket.user` | `venue_order_id` | `adapter-polymarket-user` | `archive`, `execution-sync` | 90d | 3 |
+| `raw.polymarket.user` | `venue_order_id` | `adapter-polymarket-user` | `raw-archive`, `execution-sync` | 90d | 3 |
 | `norm.quote` | `canonical_market_key` | `normalizer` | `mapper`, `latency`, `ch-sink` | 14d | 3 |
 | `mapping.decision` | `canonical_event_id` | `canonical-mapper` | `api`, `review` | 30d | 3 |
 | `latency.sample` | `canonical_market_key` | `latency-engine` | `alert`, `api` | 30d | 3 |

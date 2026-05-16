@@ -1,0 +1,31 @@
+{
+  "raw_id": "polymarket:ws_user:event-1:market-1:msg-1:fixturehash",
+  "provider": "polymarket",
+  "source_channel": "ws_user",
+  "provider_message_id": "msg-1",
+  "provider_event_id": "event-1",
+  "provider_market_id": "market-1",
+  "received_at": "2026-05-16T10:00:00Z",
+  "received_mono_ns": 123,
+  "payload_hash": "sha256:fixturehash",
+  "raw_ref": "raw/polymarket/ws_user/2026/05/16/10/polymarket_user_fixture.json",
+  "schema_version": "polymarket.user_ws.mock.v1",
+  "trace_id": "00000000-0000-4000-8000-000000000003",
+  "payload": {
+    "event_type": "order",
+    "id": "order-1",
+    "auth": {
+      "apiKey": "<redacted-api-key>",
+      "secret": "<redacted>",
+      "passphrase": "<redacted>"
+    }
+  },
+  "quality_flags": {
+    "off_board": false,
+    "delayed_source": false,
+    "stale": false,
+    "unknown_schema": false,
+    "missing_required_field": false
+  },
+  "archive_status": "received"
+}

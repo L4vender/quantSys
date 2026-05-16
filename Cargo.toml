@@ -11,6 +11,8 @@ members = [
     "services/adapter-polymarket-market",
     "services/adapter-polymarket-user",
     "services/api-gateway",
+    "services/raw-archive",
+    "services/source-health",
 ]
 resolver = "2"
 

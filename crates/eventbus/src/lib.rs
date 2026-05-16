@@ -127,6 +127,13 @@ pub struct InMemoryEventProducer {
 }
 
 impl InMemoryEventProducer {
+    pub fn consumer(&self) -> InMemoryEventConsumer {
+        InMemoryEventConsumer {
+            events: self.events.clone(),
+            next_offset: Arc::new(Mutex::new(0)),
+        }
+    }
+
     pub fn events(&self) -> Vec<EventEnvelope> {
         self.events
             .lock()
@@ -158,6 +165,36 @@ impl EventProducer for InMemoryEventProducer {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct InMemoryEventConsumer {
+    events: Arc<Mutex<Vec<EventEnvelope>>>,
+    next_offset: Arc<Mutex<usize>>,
+}
+
+#[async_trait]
+impl EventConsumer for InMemoryEventConsumer {
+    async fn poll(&self) -> Result<Option<EventEnvelope>, EventbusError> {
+        let next_offset = *self
+            .next_offset
+            .lock()
+            .expect("event consumer offset mutex poisoned");
+        let events = self.events.lock().expect("event consumer mutex poisoned");
+        Ok(events.get(next_offset).cloned())
+    }
+
+    async fn commit(&self, envelope: &EventEnvelope) -> Result<(), EventbusError> {
+        let mut next_offset = self
+            .next_offset
+            .lock()
+            .expect("event consumer offset mutex poisoned");
+        let committed_next = envelope.offset.saturating_add(1).max(0) as usize;
+        if committed_next > *next_offset {
+            *next_offset = committed_next;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct RawTopicCatalog {
     topics: Vec<TopicConfig>,
@@ -183,7 +220,7 @@ fn phase2_topics() -> Vec<TopicConfig> {
             "raw.polymarket.user",
             "venue_order_id",
             "adapter-polymarket-user",
-            &["archive", "execution-sync"],
+            &["raw-archive", "execution-sync"],
             90,
         ),
         topic(

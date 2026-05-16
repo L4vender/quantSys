@@ -1,4 +1,4 @@
-.PHONY: contract-test test-contract therundown-test therundown-contract-test therundown-integration-test therundown-mock therundown-live-probe therundown-csv-run therundown-watchlist-csv-run adapter-therundown polymarket-test polymarket-contract-test polymarket-integration-test polymarket-mock polymarket-csv-run polymarket-watchlist-csv-run adapter-polymarket-market adapter-polymarket-user polymarket-public-probe polymarket-geoblock-probe local-csv-test mapping-test live-mapping live-watchlist fmt clippy test check compose-up compose-down migrate-local topic-init topic-init-dry-run
+.PHONY: contract-test test-contract therundown-test therundown-contract-test therundown-integration-test therundown-mock therundown-live-probe therundown-csv-run therundown-watchlist-csv-run adapter-therundown polymarket-test polymarket-contract-test polymarket-integration-test polymarket-mock polymarket-csv-run polymarket-watchlist-csv-run adapter-polymarket-market adapter-polymarket-user polymarket-public-probe polymarket-geoblock-probe local-csv-test raw-archive-test source-health-test raw-archive-integration-test source-health-integration-test raw-archive-bench raw-archive source-health phase5-test phase5-integration-docker mapping-test live-mapping live-watchlist fmt clippy test check compose-up compose-down migrate-local topic-init topic-init-dry-run
 
 contract-test:
 	python3 scripts/contract/check_external_api_contract.py
@@ -14,7 +14,7 @@ clippy:
 test:
 	cargo test --workspace
 
-check: fmt clippy test contract-test therundown-test polymarket-test local-csv-test
+check: contract-test fmt clippy test therundown-test polymarket-test local-csv-test phase5-test
 
 therundown-test:
 	cargo test -p quantsys-source-sdk --test therundown_unit
@@ -62,6 +62,32 @@ polymarket-mock:
 
 local-csv-test:
 	cargo test -p quantsys-storage --test local_csv
+
+raw-archive-test:
+	cargo test -p quantsys-domain --test raw_phase5
+	cargo test -p quantsys-storage --test raw_archive_phase5
+
+source-health-test:
+	cargo test -p source-health
+
+raw-archive-integration-test:
+	cargo test -p raw-archive --test raw_archive_flow
+
+source-health-integration-test:
+	cargo test -p source-health --test source_health_api
+
+raw-archive-bench:
+	cargo test -p raw-archive --test raw_archive_flow mock_archive_sustains_one_thousand_messages_per_second -- --nocapture
+
+raw-archive:
+	cargo run -p raw-archive
+
+source-health:
+	cargo run -p source-health
+
+phase5-test: raw-archive-test source-health-test raw-archive-integration-test source-health-integration-test
+
+phase5-integration-docker: compose-up migrate-local topic-init raw-archive-integration-test source-health-integration-test
 
 polymarket-csv-run:
 	cargo run -p adapter-polymarket-market -- --config configs/sources/polymarket.example.toml --mode market-ws --csv-output output/local-csv
